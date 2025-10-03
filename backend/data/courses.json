@@ -1,0 +1,112 @@
+[
+  {
+    "code": "SODV1201",
+    "name": "Intro to Web Programming",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Learn the fundamentals of web development including HTML, CSS, and JavaScript.",
+    "capacity": 30,
+    "enrolled": 1,
+    "programCode": "SDD"
+  },
+  {
+    "code": "SODV2201",
+    "name": "Web Programming",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Advanced web programming concepts using React and Node.js.",
+    "capacity": 30,
+    "enrolled": 1,
+    "programCode": "SDD"
+  },
+  {
+    "code": "SODV1301",
+    "name": "Rapid Application Development",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Learn rapid application development techniques and frameworks.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDD"
+  },
+  {
+    "code": "SODV2301",
+    "name": "Mobile Application Development",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Build native and cross-platform mobile applications.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDD"
+  },
+  {
+    "code": "SODV1101",
+    "name": "Programming Fundamentals",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Introduction to programming logic and problem solving.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDD"
+  },
+  {
+    "code": "SODV1201",
+    "name": "Intro to Web Programming",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Learn the fundamentals of web development including HTML, CSS, and JavaScript.",
+    "capacity": 30,
+    "enrolled": 1,
+    "programCode": "SDPD"
+  },
+  {
+    "code": "SODV2201",
+    "name": "Web Programming",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Advanced web programming concepts using React and Node.js.",
+    "capacity": 30,
+    "enrolled": 1,
+    "programCode": "SDPD"
+  },
+  {
+    "code": "SODV1301",
+    "name": "Rapid Application Development",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Learn rapid application development techniques and frameworks.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDPD"
+  },
+  {
+    "code": "SODV2301",
+    "name": "Mobile Application Development",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Build native and cross-platform mobile applications.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDPD"
+  },
+  {
+    "code": "SODV1101",
+    "name": "Programming Fundamentals",
+    "term": "Fall 2025",
+    "startDate": "2025-09-01",
+    "endDate": "2025-12-15",
+    "description": "Introduction to programming logic and problem solving.",
+    "capacity": 30,
+    "enrolled": 0,
+    "programCode": "SDPD"
+  }
+]
