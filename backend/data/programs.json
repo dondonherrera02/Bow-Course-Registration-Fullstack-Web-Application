@@ -1,0 +1,22 @@
+[
+  {
+    "code": "SDD",
+    "name": "Software Development - Diploma (2 years)",
+    "department": "SD",
+    "term": "Fall",
+    "startDate": "2026-09-01",
+    "endDate": "2028-06-30",
+    "fees": [15000, 40000],
+    "description": "2-year diploma program in Software Development covering programming, web development, mobile apps, and databases."
+  },
+  {
+    "code": "SDPD",
+    "name": "Software Development - Post-Diploma (1 year)",
+    "department": "SD",
+    "term": "Fall",
+    "startDate": "2026-09-01",
+    "endDate": "2027-06-30",
+    "fees": [20000, 60000],
+    "description": "Designed for those with prior education or experience, the program focuses on practical skills in programming, web and mobile application development, and databases. "
+  }
+]

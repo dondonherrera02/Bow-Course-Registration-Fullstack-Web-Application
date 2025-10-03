@@ -14,6 +14,9 @@ const { SwaggerDocs } = require("./swagger.js");
 // set up global configuration access - .env file
 dotenv.config();
 
+const courseRoutes = require("./routes/courses");
+const programRoutes = require("./routes/programs");
+
 // CORS Middleware
 app.use(
   cors({
@@ -26,10 +29,8 @@ app.use(
 
 app.use(express.json()); // body parsing middleware
 
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", message: "Bow Course Registration API is running" });
-});
+app.use("/api/courses", courseRoutes);
+app.use("/api/programs", programRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
