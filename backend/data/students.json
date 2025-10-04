@@ -1,0 +1,16 @@
+[
+  {
+    "id": "STUD2025001",
+    "firstName": "Dondon",
+    "lastName": "Herrera",
+    "email": "dondon.herrera@test.com",
+    "phone": "111111111",
+    "birthday": "2000-04-02",
+    "department": "SD",
+    "program": "SDD",
+    "username": "dondon",
+    "password": "admin123",
+    "registeredCourses": [],
+    "createdAt": "2025-10-04T04:52:59.499Z"
+  }
+]
