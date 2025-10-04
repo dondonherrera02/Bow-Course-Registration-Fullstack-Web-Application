@@ -14,6 +14,7 @@ const { SwaggerDocs } = require("./swagger.js");
 // set up global configuration access - .env file
 dotenv.config();
 
+const authRoutes = require("./routes/auth");
 const courseRoutes = require("./routes/courses");
 const programRoutes = require("./routes/programs");
 
@@ -29,6 +30,8 @@ app.use(
 
 app.use(express.json()); // body parsing middleware
 
+// Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/programs", programRoutes);
 
