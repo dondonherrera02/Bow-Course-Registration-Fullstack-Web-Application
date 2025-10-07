@@ -8,6 +8,7 @@
 const express = require("express");
 const { readJSON, writeJSON } = require("../utils/fileOperations");
 const { verifyToken } = require("../utils/authHelper");
+const { validateCourseFields } = require("../utils/courseHelper");
 
 const router = express.Router();
 
@@ -35,11 +36,12 @@ router.post("/", verifyToken, (req, res) => {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const { code, name, term, startDate, endDate, description } = req.body;
-
-  if (!code || !name || !term || !startDate || !endDate || !description) {
-    return res.status(400).json({ error: "All fields are required" });
+  const errors = validateCourseFields(req.body);
+  if (errors.length > 0) {
+    return res.status(400).json({ error: errors });
   }
+
+  const { code, name, term, startDate, endDate, description } = req.body;
 
   const courses = readJSON("courses.json");
 
@@ -77,6 +79,11 @@ router.put("/:code", verifyToken, (req, res) => {
 
   if (courseIndex === -1) {
     return res.status(404).json({ error: "Course not found" });
+  }
+
+  const errors = validateCourseFields(req.body);
+  if (errors.length > 0) {
+    return res.status(400).json({ error: errors });
   }
 
   const { name, term, startDate, endDate, description } = req.body;

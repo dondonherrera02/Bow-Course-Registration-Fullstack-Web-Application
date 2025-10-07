@@ -2,7 +2,7 @@
   {
     "code": "SODV1201",
     "name": "Intro to Web Programming",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Learn the fundamentals of web development including HTML, CSS, and JavaScript.",
@@ -13,7 +13,7 @@
   {
     "code": "SODV2201",
     "name": "Web Programming",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Advanced web programming concepts using React and Node.js.",
@@ -24,7 +24,7 @@
   {
     "code": "SODV1301",
     "name": "Rapid Application Development",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Learn rapid application development techniques and frameworks.",
@@ -35,7 +35,7 @@
   {
     "code": "SODV2301",
     "name": "Mobile Application Development",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Build native and cross-platform mobile applications.",
@@ -46,7 +46,7 @@
   {
     "code": "SODV1101",
     "name": "Programming Fundamentals",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Introduction to programming logic and problem solving.",
@@ -57,7 +57,7 @@
   {
     "code": "SODV1201",
     "name": "Intro to Web Programming",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Learn the fundamentals of web development including HTML, CSS, and JavaScript.",
@@ -68,7 +68,7 @@
   {
     "code": "SODV2201",
     "name": "Web Programming",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Advanced web programming concepts using React and Node.js.",
@@ -79,7 +79,7 @@
   {
     "code": "SODV1301",
     "name": "Rapid Application Development",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Learn rapid application development techniques and frameworks.",
@@ -90,7 +90,7 @@
   {
     "code": "SODV2301",
     "name": "Mobile Application Development",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Build native and cross-platform mobile applications.",
@@ -101,7 +101,7 @@
   {
     "code": "SODV1101",
     "name": "Programming Fundamentals",
-    "term": "Fall 2025",
+    "term": "Fall",
     "startDate": "2025-09-01",
     "endDate": "2025-12-15",
     "description": "Introduction to programming logic and problem solving.",
