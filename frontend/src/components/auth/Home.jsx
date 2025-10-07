@@ -37,7 +37,7 @@ const Home = () => {
   };
 
   return (
-    <div className="landing-page">
+    <div className="font-poppins landing-page">
       {/* Navigation Header */}
       <nav className="navbar">
         <div className="nav-container">
@@ -52,7 +52,7 @@ const Home = () => {
             <Link to="/login" className="nav-link">
               Login
             </Link>
-            <Link to="/signup" className="nav-link">
+            <Link to="/register" className="nav-link">
               Sign Up
             </Link>
           </div>
@@ -70,7 +70,7 @@ const Home = () => {
                 Discover our comprehensive programs and register for course that
                 will advance your career in technology.
               </p>
-              <Link to="/signup" className="cta-button">
+              <Link to="/register" className="cta-button">
                 Register Now!
               </Link>
             </div>
@@ -161,7 +161,7 @@ const Home = () => {
             Step into your future with Bow Valley College! Explore courses, plan
             your path, and connect with a community ready to help you succeed.
           </p>
-          <Link to="/signup" className="cta-button-white">
+          <Link to="/register" className="cta-button-white">
             Register Now!
           </Link>
         </div>
