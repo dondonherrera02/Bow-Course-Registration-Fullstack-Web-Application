@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
+import EnumService from "../../services/enum";
+import { apiHelper } from "../../services/apiHelper";
 import "./Home.css";
 
-const API_URL = "http://localhost:8080/api";
+// get the default backend api url from enum service
+const { BOW_COURSE_APP_API_URL } = EnumService();
 
 const Home = () => {
   const [courses, setCourses] = useState([]);
@@ -17,13 +20,10 @@ const Home = () => {
 
   const fetchData = async () => {
     try {
-      const [coursesRes, programsRes] = await Promise.all([
-        fetch(`${API_URL}/courses`),
-        fetch(`${API_URL}/programs`),
+      const [coursesData, programsData] = await Promise.all([
+        apiHelper.get(`${BOW_COURSE_APP_API_URL}/courses`),
+        apiHelper.get(`${BOW_COURSE_APP_API_URL}/programs`),
       ]);
-
-      const coursesData = await coursesRes.json();
-      const programsData = await programsRes.json();
 
       setCourses(coursesData);
       setPrograms(programsData);
@@ -35,7 +35,7 @@ const Home = () => {
   };
 
   return (
-    <div className="landing-page">
+    <div className="font-poppins landing-page">
       {/* Navigation Header */}
       <nav className="navbar">
         <div className="nav-container">
@@ -50,7 +50,7 @@ const Home = () => {
             <Link to="/login" className="nav-link">
               Login
             </Link>
-            <Link to="/signup" className="nav-link">
+            <Link to="/register" className="nav-link">
               Sign Up
             </Link>
           </div>
@@ -68,7 +68,7 @@ const Home = () => {
                 Discover our comprehensive programs and register for course that
                 will advance your career in technology.
               </p>
-              <Link to="/signup" className="cta-button">
+              <Link to="/register" className="cta-button">
                 Register Now!
               </Link>
             </div>
@@ -159,7 +159,7 @@ const Home = () => {
             Step into your future with Bow Valley College! Explore courses, plan
             your path, and connect with a community ready to help you succeed.
           </p>
-          <Link to="/signup" className="cta-button-white">
+          <Link to="/register" className="cta-button-white">
             Register Now!
           </Link>
         </div>
