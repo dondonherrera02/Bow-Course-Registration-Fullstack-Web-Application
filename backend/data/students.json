@@ -9,8 +9,8 @@
     "department": "SD",
     "program": "SDD",
     "username": "dondon",
-    "password": "admin123",
+    "hashedPassword": "$2b$10$/CTYILxsxkjrPUorCoBDW.g5HdWW/hpxxSQ.vj4KnykTwcZcrTQYC",
     "registeredCourses": [],
-    "createdAt": "2025-10-04T04:52:59.499Z"
+    "createdAt": "2025-10-07T16:25:17.811Z"
   }
 ]

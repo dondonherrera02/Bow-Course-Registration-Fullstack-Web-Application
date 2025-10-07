@@ -1,6 +1,15 @@
+/**
+ * @name: Bow Course Registration Fullstack Web Application
+ * @course: Web Programming SODV2201 Assignment and Project Work 2025
+ * @class: SODV2201
+ * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
+ */
+
 const express = require("express");
-const router = express.Router();
 const { readJSON, writeJSON } = require("../utils/fileOperations");
+const { verifyToken } = require("../utils/authHelper");
+
+const router = express.Router();
 
 // Get all courses (public)
 router.get("/", (req, res) => {
@@ -18,6 +27,95 @@ router.get("/:code", (req, res) => {
   }
 
   res.json(course);
+});
+
+// Create new course (Admin only)
+router.post("/", verifyToken, (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Access denied. Admin only." });
+  }
+
+  const { code, name, term, startDate, endDate, description } = req.body;
+
+  if (!code || !name || !term || !startDate || !endDate || !description) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  const courses = readJSON("courses.json");
+
+  // Check if course code already exists
+  if (courses.some((c) => c.code === code)) {
+    return res.status(400).json({ error: "Course code already exists" });
+  }
+
+  const newCourse = {
+    code,
+    name,
+    term,
+    startDate,
+    endDate,
+    description,
+  };
+
+  courses.push(newCourse);
+  writeJSON("courses.json", courses);
+
+  res.status(201).json({
+    message: "Course created successfully",
+    course: newCourse,
+  });
+});
+
+// Update course (Admin only)
+router.put("/:code", verifyToken, (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Access denied. Admin only." });
+  }
+
+  const courses = readJSON("courses.json");
+  const courseIndex = courses.findIndex((c) => c.code === req.params.code);
+
+  if (courseIndex === -1) {
+    return res.status(404).json({ error: "Course not found" });
+  }
+
+  const { name, term, startDate, endDate, description } = req.body;
+
+  // Update course
+  courses[courseIndex] = {
+    ...courses[courseIndex],
+    ...(name && { name }),
+    ...(term && { term }),
+    ...(startDate && { startDate }),
+    ...(endDate && { endDate }),
+    ...(description && { description }),
+  };
+
+  writeJSON("courses.json", courses);
+
+  res.json({
+    message: "Course updated successfully",
+    course: courses[courseIndex],
+  });
+});
+
+// Delete course (Admin only)
+router.delete("/:code", verifyToken, (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Access denied. Admin only." });
+  }
+
+  const courses = readJSON("courses.json");
+  const courseIndex = courses.findIndex((c) => c.code === req.params.code);
+
+  if (courseIndex === -1) {
+    return res.status(404).json({ error: "Course not found" });
+  }
+
+  courses.splice(courseIndex, 1);
+  writeJSON("courses.json", courses);
+
+  res.json({ message: "Course deleted successfully" });
 });
 
 module.exports = router;
