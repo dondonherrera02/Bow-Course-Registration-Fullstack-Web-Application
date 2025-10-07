@@ -96,15 +96,37 @@ const validateRegistrationFields = (data) => {
     errors.push("Phone number must contain only digits (10-15 digits)");
   }
 
-  if (data.birthday && isNaN(Date.parse(data.birthday))) {
-    errors.push("Invalid birthday format (YYYY-MM-DD)");
+  if (data.birthday) {
+    const birthdayRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!birthdayRegex.test(data.birthday)) {
+      errors.push("Birthday must be in YYYY-MM-DD format");
+    } else {
+      const birthday = new Date(data.birthday);
+      const now = new Date();
+      if (isNaN(birthday)) {
+        errors.push("Invalid birthday date");
+      } else if (birthday > now) {
+        errors.push("Birthday cannot be in the future");
+      } else {
+        // Minimum age validation
+        const ageDiff = now.getFullYear() - birthday.getFullYear();
+        const m = now.getMonth() - birthday.getMonth();
+        const age =
+          m < 0 || (m === 0 && now.getDate() < birthday.getDate())
+            ? ageDiff - 1
+            : ageDiff;
+        if (age < 15) {
+          errors.push("You must be at least 15 years old");
+        }
+      }
+    }
   }
 
   if (data.username && /\s/.test(data.username)) {
     errors.push("Username must not contain spaces");
   }
 
-  return errors;
+  return errors.length > 0 ? errors.join(", ") : null;
 };
 
 module.exports = {

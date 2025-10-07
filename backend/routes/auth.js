@@ -60,7 +60,7 @@ router.post("/register", async (req, res) => {
 
   // Validation
   const errors = validateRegistrationFields(req.body);
-  if (errors.length > 0) {
+  if (errors) {
     return res.status(400).json({ error: errors });
   }
 

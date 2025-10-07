@@ -64,7 +64,7 @@ function validateCourseFields(data) {
     errors.push("Description must be at least 10 characters");
   }
 
-  return errors;
+  return errors.length > 0 ? errors.join(", ") : null;
 }
 
 module.exports = {
