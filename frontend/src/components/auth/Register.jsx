@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import EnumService from "../../services/enum";
 import { toast } from "react-toastify";
+import { apiHelper } from "../../services/apiHelper";
 
-// get the default backend api url from enum service
 const { BOW_COURSE_APP_API_URL } = EnumService();
 
 const Signup = () => {
@@ -29,8 +29,7 @@ const Signup = () => {
 
   const fetchPrograms = async () => {
     try {
-      const response = await fetch(`${BOW_COURSE_APP_API_URL}/programs`);
-      const data = await response.json();
+      const data = await apiHelper.get(`${BOW_COURSE_APP_API_URL}/programs`);
       setPrograms(data);
     } catch (err) {
       console.error("Error fetching programs:", err);
@@ -53,10 +52,9 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${BOW_COURSE_APP_API_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await apiHelper.post(
+        `${BOW_COURSE_APP_API_URL}/auth/register`,
+        {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
@@ -65,21 +63,15 @@ const Signup = () => {
           program: formData.program,
           username: formData.username,
           password: formData.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Registration failed");
-      }
+        }
+      );
 
       toast.success(
         `Registration successful! Your Student ID is: ${data.studentId}`
       );
       navigate("/login");
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }

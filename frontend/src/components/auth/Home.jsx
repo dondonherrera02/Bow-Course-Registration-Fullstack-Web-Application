@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 import EnumService from "../../services/enum";
+import { apiHelper } from "../../services/apiHelper";
 import "./Home.css";
 
 // get the default backend api url from enum service
@@ -19,13 +20,10 @@ const Home = () => {
 
   const fetchData = async () => {
     try {
-      const [coursesRes, programsRes] = await Promise.all([
-        fetch(`${BOW_COURSE_APP_API_URL}/courses`),
-        fetch(`${BOW_COURSE_APP_API_URL}/programs`),
+      const [coursesData, programsData] = await Promise.all([
+        apiHelper.get(`${BOW_COURSE_APP_API_URL}/courses`),
+        apiHelper.get(`${BOW_COURSE_APP_API_URL}/programs`),
       ]);
-
-      const coursesData = await coursesRes.json();
-      const programsData = await programsRes.json();
 
       setCourses(coursesData);
       setPrograms(programsData);

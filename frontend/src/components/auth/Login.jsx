@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import EnumService from "../../services/enum";
+import { apiHelper } from "../../services/apiHelper";
 
 const { BOW_COURSE_APP_API_URL } = EnumService();
 
@@ -17,17 +18,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${BOW_COURSE_APP_API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
-      }
+      const data = await apiHelper.post(
+        `${BOW_COURSE_APP_API_URL}/auth/login`,
+        { username, password }
+      );
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -38,7 +32,7 @@ const Login = () => {
         navigate("/student/dashboard");
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
