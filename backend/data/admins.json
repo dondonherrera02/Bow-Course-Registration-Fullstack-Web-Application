@@ -4,6 +4,6 @@
     "name": "Dondon Herrera",
     "email": "admin@bowvalley.ca",
     "username": "admin",
-    "password": "admin123"
+    "hashedPassword": "$2b$10$/CTYILxsxkjrPUorCoBDW.g5HdWW/hpxxSQ.vj4KnykTwcZcrTQYC"
   }
 ]

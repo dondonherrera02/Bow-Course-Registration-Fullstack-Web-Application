@@ -1,71 +1,52 @@
+/**
+ * @name: Bow Course Registration Fullstack Web Application
+ * @course: Web Programming SODV2201 Assignment and Project Work 2025
+ * @class: SODV2201
+ * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
+ */
+
 const express = require("express");
 const router = express.Router();
-const { readJSON, writeJSON } = require("../utils/fileOperations");
-const { generateToken } = require("../utils/auth");
+const { writeJSON, readJSON } = require("../utils/fileOperations");
+const { roleEnum } = require("../utils/enum");
+const bcrypt = require("bcrypt");
+const {
+  generateStudentId,
+  hashPassword,
+  validateRegistrationFields,
+} = require("../utils/authHelper");
+const { findUserByField, prepareUserResponse } = require("../utils/userHelper");
 
 // Login route
-router.post("/login", (req, res) => {
+router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ error: "Username and password required" });
   }
 
-  // Check admins
-  const admins = readJSON("admins.json");
-  const admin = admins.find(
-    (a) => a.username === username && a.password === password
-  );
-
-  if (admin) {
-    const token = generateToken({ ...admin, role: "admin" });
-    return res.json({
-      token,
-      user: {
-        id: admin.id,
-        name: admin.name,
-        role: "admin",
-        email: admin.email,
-      },
-    });
+  // Try student login
+  let user = findUserByField("students.json", "username", username);
+  if (user) {
+    const valid = await bcrypt.compare(password, user.hashedPassword);
+    if (!valid) return res.status(401).json({ error: "Invalid password" });
+    return res.json(prepareUserResponse(user, roleEnum.STUDENT));
   }
 
-  // Check students
-  const students = readJSON("students.json");
-  const student = students.find(
-    (s) => s.username === username && s.password === password
-  );
-
-  if (student) {
-    const token = generateToken({ ...student, role: "student" });
-    return res.json({
-      token,
-      user: {
-        id: student.id,
-        name: `${student.firstName} ${student.lastName}`,
-        role: "student",
-        email: student.email,
-        department: student.department,
-        program: student.program,
-      },
-    });
+  // Try admin login
+  user = findUserByField("admins.json", "username", username);
+  if (user) {
+    const valid = await bcrypt.compare(password, user.hashedPassword);
+    if (!valid) return res.status(401).json({ error: "Invalid password" });
+    return res.json(prepareUserResponse(user, roleEnum.ADMIN));
   }
 
+  // If no valid user found
   return res.status(401).json({ error: "Invalid credentials" });
 });
 
-// Generate student ID
-const generateStudentId = () => {
-  const students = readJSON("students.json");
-  const year = new Date().getFullYear();
-  const lastId =
-    students.length > 0 ? students[students.length - 1].id : `STUD${year}000`;
-  const num = parseInt(lastId.slice(-3)) + 1;
-  return `STUD${year}${String(num).padStart(3, "0")}`;
-};
-
 // Register new student
-router.post("/register", (req, res) => {
+router.post("/register", async (req, res) => {
   const {
     firstName,
     lastName,
@@ -78,21 +59,25 @@ router.post("/register", (req, res) => {
   } = req.body;
 
   // Validation
-  if (!firstName || !lastName || !email || !username || !password) {
-    return res
-      .status(400)
-      .json({ error: "All required fields must be filled" });
+  const errors = validateRegistrationFields(req.body);
+  if (errors) {
+    return res.status(400).json({ error: errors });
   }
-
-  const students = readJSON("students.json");
 
   // Check if username or email exists
-  if (students.find((s) => s.username === username)) {
+  let studentUsername = findUserByField("students.json", "student", username);
+  if (studentUsername) {
     return res.status(400).json({ error: "Username already exists" });
   }
-  if (students.find((s) => s.email === email)) {
+
+  let studentEmail = findUserByField("students.json", "email", email);
+
+  if (studentEmail) {
     return res.status(400).json({ error: "Email already exists" });
   }
+
+  // Hash the password before storing
+  const hashedPassword = await hashPassword(password);
 
   // Create new student
   const newStudent = {
@@ -105,11 +90,12 @@ router.post("/register", (req, res) => {
     department: "SD",
     program,
     username,
-    password,
+    hashedPassword,
     registeredCourses: [],
     createdAt: new Date().toISOString(),
   };
 
+  const students = readJSON("students.json");
   students.push(newStudent);
   writeJSON("students.json", students);
 

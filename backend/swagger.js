@@ -2,7 +2,7 @@
  * @name: Bow Course Registration Fullstack Web Application
  * @course: Web Programming SODV2201 Assignment and Project Work 2025
  * @class: SODV2201
- * @author: Dondon Herrera
+ * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
  */
 
 // install swagger-jsdoc swagger-ui-express --save-dev
