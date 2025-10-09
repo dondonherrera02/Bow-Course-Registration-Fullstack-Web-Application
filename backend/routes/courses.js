@@ -41,13 +41,57 @@ router.post("/", verifyToken, (req, res) => {
     return res.status(400).json({ error: errors });
   }
 
-  const { code, name, term, startDate, endDate, description } = req.body;
+  const now = new Date();
+  let reqStartDate, reqEndDate;
+  if (req.body.startDate) reqStartDate = new Date(req.body.startDate);
+  if (req.body.endDate) reqEndDate = new Date(req.body.endDate);
+  // Check chronological order and if dates are not in the past
+  if (
+    reqStartDate &&
+    reqEndDate &&
+    !isNaN(reqStartDate) &&
+    !isNaN(reqEndDate)
+  ) {
+    if (reqEndDate <= reqStartDate) {
+      return res
+        .status(400)
+        .json({ error: "End Date must be after Start Date" });
+    }
+    if (reqStartDate < now) {
+      return res
+        .status(400)
+        .json({ error: "Start Date must not be in the past" });
+    }
+    if (reqEndDate < now) {
+      return res
+        .status(400)
+        .json({ error: "End Date must not be in the past" });
+    }
+  }
+
+  const {
+    code,
+    name,
+    term,
+    startDate,
+    endDate,
+    description,
+    capacity,
+    programCode,
+  } = req.body;
 
   const courses = readJSON("courses.json");
 
   // Check if course code already exists
   if (courses.some((c) => c.code === code)) {
     return res.status(400).json({ error: "Course code already exists" });
+  }
+
+  const programs = readJSON("programs.json");
+
+  // Check if the request program code exists
+  if (!programs.some((p) => p.code === programCode)) {
+    return res.status(400).json({ error: "Program code not registered" });
   }
 
   const newCourse = {
@@ -57,6 +101,13 @@ router.post("/", verifyToken, (req, res) => {
     startDate,
     endDate,
     description,
+    capacity,
+    enrolled: 0,
+    programCode,
+    createdBy: req.user.username,
+    createdAt: new Date().toISOString(),
+    updatedBy: req.user.username,
+    updatedAt: new Date().toISOString(),
   };
 
   courses.push(newCourse);
@@ -86,7 +137,25 @@ router.put("/:code", verifyToken, (req, res) => {
     return res.status(400).json({ error: errors });
   }
 
-  const { name, term, startDate, endDate, description } = req.body;
+  // Check chronological order and if dates are not in the past
+  let reqStartDate, reqEndDate;
+  if (req.body.startDate) reqStartDate = new Date(req.body.startDate);
+  if (req.body.endDate) reqEndDate = new Date(req.body.endDate);
+  if (
+    reqStartDate &&
+    reqEndDate &&
+    !isNaN(reqStartDate) &&
+    !isNaN(reqEndDate)
+  ) {
+    if (reqEndDate <= reqStartDate) {
+      return res
+        .status(400)
+        .json({ error: "End Date must be after Start Date" });
+    }
+  }
+
+  const { name, term, startDate, endDate, description, capacity, programCode } =
+    req.body;
 
   // Update course
   courses[courseIndex] = {
@@ -96,6 +165,10 @@ router.put("/:code", verifyToken, (req, res) => {
     ...(startDate && { startDate }),
     ...(endDate && { endDate }),
     ...(description && { description }),
+    ...(capacity && { capacity }),
+    ...(programCode && { programCode }),
+    updatedBy: req.user.username,
+    updatedAt: new Date().toISOString(),
   };
 
   writeJSON("courses.json", courses);

@@ -16,6 +16,8 @@ function validateCourseFields(data) {
     "startDate",
     "endDate",
     "description",
+    "capacity",
+    "programCode",
   ];
   requiredFields.forEach((field) => {
     if (!data[field]) {
@@ -34,7 +36,6 @@ function validateCourseFields(data) {
   }
 
   // Date validation logic
-  const now = new Date();
   let startDate, endDate;
   if (data.startDate) startDate = new Date(data.startDate);
   if (data.endDate) endDate = new Date(data.endDate);
@@ -46,22 +47,17 @@ function validateCourseFields(data) {
     errors.push("Invalid End Date format (YYYY-MM-DD)");
   }
 
-  // Check chronological order and if dates are not in the past
-  if (startDate && endDate && !isNaN(startDate) && !isNaN(endDate)) {
-    if (endDate <= startDate) {
-      errors.push("End Date must be after Start Date");
-    }
-    if (startDate < now) {
-      errors.push("Start Date must not be in the past");
-    }
-    if (endDate < now) {
-      errors.push("End Date must not be in the past");
-    }
-  }
-
   // Description minimum length
   if (data.description && data.description.length < 10) {
     errors.push("Description must be at least 10 characters");
+  }
+
+  if (
+    typeof data.capacity !== "number" ||
+    data.capacity < 1 ||
+    data.capacity > 40
+  ) {
+    errors.push("Capacity must be a number between 1 and 40");
   }
 
   return errors.length > 0 ? errors.join(", ") : null;
