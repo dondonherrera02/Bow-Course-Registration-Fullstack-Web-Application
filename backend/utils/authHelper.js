@@ -126,7 +126,7 @@ const validateRegistrationFields = (data) => {
     errors.push("Username must not contain spaces");
   }
 
-  return errors.length > 0 ? errors.join(", ") : null;
+  return errors.length > 0 ? errors.join("\r\n") : null;
 };
 
 module.exports = {

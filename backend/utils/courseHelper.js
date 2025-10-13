@@ -5,6 +5,73 @@
  * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
  */
 
+// Term date range definitions (month is 0-indexed: 0=January, 11=December)
+const TERM_RANGES = {
+  Spring: { startMonth: 2, endMonth: 5 }, // March - June
+  Summer: { startMonth: 5, endMonth: 7 }, // June - August
+  Fall: { startMonth: 8, endMonth: 11 }, // September - December
+  Winter: { startMonth: 0, endMonth: 2 }, // January - March
+};
+
+// Validate that dates fall within the specified term period
+function validateTermDates(term, startDate, endDate) {
+  if (!term || !startDate || !endDate) {
+    return null;
+  }
+
+  const range = TERM_RANGES[term];
+  if (!range) {
+    return null;
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start) || isNaN(end)) {
+    return null;
+  }
+
+  const startMonth = start.getMonth();
+  const endMonth = end.getMonth();
+
+  // Check if start date falls within term range
+  if (startMonth < range.startMonth || startMonth > range.endMonth) {
+    return `Start date must be within ${term} term (${getTermMonthRange(
+      term
+    )})`;
+  }
+
+  // Check if end date falls within term range
+  if (endMonth < range.startMonth || endMonth > range.endMonth) {
+    return `End date must be within ${term} term (${getTermMonthRange(term)})`;
+  }
+
+  return null;
+}
+
+// Get human-readable month range for a term
+function getTermMonthRange(term) {
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const range = TERM_RANGES[term];
+  if (!range) return "";
+
+  return `${monthNames[range.startMonth]} - ${monthNames[range.endMonth]}`;
+}
+
 function validateCourseFields(data) {
   const errors = [];
 
@@ -60,9 +127,21 @@ function validateCourseFields(data) {
     errors.push("Capacity must be a number between 1 and 40");
   }
 
-  return errors.length > 0 ? errors.join(", ") : null;
+  // Validate term dates match the term period
+  const termDateError = validateTermDates(
+    data.term,
+    data.startDate,
+    data.endDate
+  );
+  if (termDateError) {
+    errors.push(termDateError);
+  }
+
+  return errors.length > 0 ? errors.join("\r\n") : null;
 }
 
 module.exports = {
   validateCourseFields,
+  validateTermDates,
+  getTermMonthRange,
 };

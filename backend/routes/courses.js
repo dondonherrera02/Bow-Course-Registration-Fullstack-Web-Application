@@ -15,7 +15,15 @@ const router = express.Router();
 // Get all courses (public)
 router.get("/", (req, res) => {
   const courses = readJSON("courses.json");
-  res.json(courses);
+
+  // Add remaining slots calculation to each course
+  const coursesWithSlots = courses.map((course) => ({
+    ...course,
+    remainingSlots: course.capacity - course.enrolled,
+    isFull: course.enrolled >= course.capacity,
+  }));
+
+  res.json(coursesWithSlots);
 });
 
 // Get course by code
@@ -27,7 +35,14 @@ router.get("/:code", (req, res) => {
     return res.status(404).json({ error: "Course not found" });
   }
 
-  res.json(course);
+  // Add remaining slots calculation
+  const courseWithSlots = {
+    ...course,
+    remainingSlots: course.capacity - course.enrolled,
+    isFull: course.enrolled >= course.capacity,
+  };
+
+  res.json(courseWithSlots);
 });
 
 // Create new course (Admin only)
@@ -132,21 +147,33 @@ router.put("/:code", verifyToken, (req, res) => {
     return res.status(404).json({ error: "Course not found" });
   }
 
-  const errors = validateCourseFields(req.body);
+  const existingCourse = courses[courseIndex];
+  const { name, term, startDate, endDate, description, capacity, programCode } =
+    req.body;
+
+  // Build the updated course data for validation
+  const updatedData = {
+    code: existingCourse.code,
+    name: name || existingCourse.name,
+    term: term || existingCourse.term,
+    startDate: startDate || existingCourse.startDate,
+    endDate: endDate || existingCourse.endDate,
+    description: description || existingCourse.description,
+    capacity: capacity !== undefined ? capacity : existingCourse.capacity,
+    programCode: programCode || existingCourse.programCode,
+  };
+
+  // Validate all fields (using updated values)
+  const errors = validateCourseFields(updatedData);
   if (errors) {
     return res.status(400).json({ error: errors });
   }
 
-  // Check chronological order and if dates are not in the past
-  let reqStartDate, reqEndDate;
-  if (req.body.startDate) reqStartDate = new Date(req.body.startDate);
-  if (req.body.endDate) reqEndDate = new Date(req.body.endDate);
-  if (
-    reqStartDate &&
-    reqEndDate &&
-    !isNaN(reqStartDate) &&
-    !isNaN(reqEndDate)
-  ) {
+  // Check chronological order
+  const reqStartDate = new Date(updatedData.startDate);
+  const reqEndDate = new Date(updatedData.endDate);
+
+  if (!isNaN(reqStartDate) && !isNaN(reqEndDate)) {
     if (reqEndDate <= reqStartDate) {
       return res
         .status(400)
@@ -154,18 +181,15 @@ router.put("/:code", verifyToken, (req, res) => {
     }
   }
 
-  const { name, term, startDate, endDate, description, capacity, programCode } =
-    req.body;
-
   // Update course
   courses[courseIndex] = {
-    ...courses[courseIndex],
+    ...existingCourse,
     ...(name && { name }),
     ...(term && { term }),
     ...(startDate && { startDate }),
     ...(endDate && { endDate }),
     ...(description && { description }),
-    ...(capacity && { capacity }),
+    ...(capacity !== undefined && { capacity }),
     ...(programCode && { programCode }),
     updatedBy: req.user.username,
     updatedAt: new Date().toISOString(),

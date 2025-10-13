@@ -8,6 +8,7 @@
 const express = require("express");
 const { readJSON, writeJSON } = require("../utils/fileOperations");
 const { verifyToken } = require("../utils/authHelper");
+const { roleEnum } = require("../utils/enum");
 
 const router = express.Router();
 
@@ -27,9 +28,9 @@ router.get("/students", verifyToken, (req, res) => {
   res.json(studentsWithoutPasswords);
 });
 
-// Get student by ID (Admin only)
+// Get student by ID (Admin)
 router.get("/students/:id", verifyToken, (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
