@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "./Auth.css";
 import EnumService from "../../services/enum";
 import { toast } from "react-toastify";
 import { apiHelper } from "../../services/apiHelper";
@@ -78,29 +79,19 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600 p-5">
-      <div className="bg-white rounded-xl shadow-2xl p-10 w-full max-w-2xl">
-        <div className="text-center mb-8">
-          <h1 className="font-poppins text-[26px] text-gray-800 font-bold mb-2">
-            Bow Course Registration
-          </h1>
-          <h2 className="font-poppins text-purple-500 text-[20px] font-medium">
-            Student Sign Up
-          </h2>
+    <div className="auth-container">
+      <div className="auth-card large">
+        <div className="auth-header">
+          <h1 className="auth-title">Bow Course Registration</h1>
+          <h2 className="auth-subtitle">Student Sign Up</h2>
         </div>
 
-        {error && (
-          <div className="font-poppins bg-red-50 text-red-700 p-3 rounded-lg mb-5 border-l-4 border-red-700">
-            {error}
-          </div>
-        )}
+        {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="font-poppins grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                First Name *
-              </label>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-row-md">
+            <div className="form-group">
+              <label className="form-label">First Name *</label>
               <input
                 type="text"
                 name="firstName"
@@ -108,14 +99,12 @@ const Signup = () => {
                 onChange={handleChange}
                 required
                 placeholder="Enter first name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
 
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                Last Name *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Last Name *</label>
               <input
                 type="text"
                 name="lastName"
@@ -123,15 +112,13 @@ const Signup = () => {
                 onChange={handleChange}
                 required
                 placeholder="Enter last name"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block mb-2 text-gray-700 font-medium">
-              Email *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Email *</label>
             <input
               type="email"
               name="email"
@@ -139,49 +126,43 @@ const Signup = () => {
               onChange={handleChange}
               required
               placeholder="Enter email address"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+              className="form-input"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                Phone
-              </label>
+          <div className="form-row-md">
+            <div className="form-group">
+              <label className="form-label">Phone</label>
               <input
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="Enter phone number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
 
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                Birthday
-              </label>
+            <div className="form-group">
+              <label className="form-label">Birthday</label>
               <input
                 type="date"
                 name="birthday"
                 value={formData.birthday}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block mb-2 text-gray-700 font-medium">
-              Program *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Program *</label>
             <select
               name="program"
               value={formData.program}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+              className="form-select"
             >
               {programs.map((prog) => (
                 <option key={prog.code} value={prog.code}>
@@ -191,10 +172,8 @@ const Signup = () => {
             </select>
           </div>
 
-          <div>
-            <label className="block mb-2 text-gray-700 font-medium">
-              Username *
-            </label>
+          <div className="form-group">
+            <label className="form-label">Username *</label>
             <input
               type="text"
               name="username"
@@ -202,15 +181,13 @@ const Signup = () => {
               onChange={handleChange}
               required
               placeholder="Choose a username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+              className="form-input"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                Password *
-              </label>
+          <div className="form-row-md">
+            <div className="form-group">
+              <label className="form-label">Password *</label>
               <input
                 type="password"
                 name="password"
@@ -218,14 +195,12 @@ const Signup = () => {
                 onChange={handleChange}
                 required
                 placeholder="Enter password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
 
-            <div>
-              <label className="block mb-2 text-gray-700 font-medium">
-                Confirm Password *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Confirm Password *</label>
               <input
                 type="password"
                 name="confirmPassword"
@@ -233,27 +208,20 @@ const Signup = () => {
                 onChange={handleChange}
                 required
                 placeholder="Confirm password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+                className="form-input"
               />
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-purple-600 text-white rounded-lg text-base font-semibold hover:bg-purple-700"
-          >
+          <button type="submit" disabled={loading} className="auth-button">
             {loading ? "Signing up..." : "Sign Up"}
           </button>
         </form>
 
-        <div className="mt-5 text-center">
-          <p className="text-gray-600">
+        <div className="auth-footer">
+          <p className="footer-text">
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-purple-600 font-semibold hover:underline"
-            >
+            <Link to="/login" className="footer-link">
               Login
             </Link>
           </p>

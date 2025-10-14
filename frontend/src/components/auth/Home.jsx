@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from "react-icons/fa";
 import EnumService from "../../services/enum";
 import { apiHelper } from "../../services/apiHelper";
-import "./Home.css";
+import "./Auth.css";
 
 // get the default backend api url from enum service
 const { BOW_COURSE_APP_API_URL } = EnumService();
@@ -178,13 +178,13 @@ const Home = () => {
             <div className="footer-column">
               <h3 className="footer-title">Quick Links</h3>
               <div className="footer-links">
-                <Link to="/about" className="footer-link">
+                <Link to="/about" className="footer-link home">
                   About Us
                 </Link>
-                <Link to="/faq" className="footer-link">
+                <Link to="/faq" className="footer-link home">
                   FAQ (Frequently Asked Questions)
                 </Link>
-                <Link to="/help" className="footer-link">
+                <Link to="/help" className="footer-link home">
                   Help Center
                 </Link>
               </div>
@@ -192,16 +192,16 @@ const Home = () => {
             <div className="footer-column">
               <h3 className="footer-title">Follow Us</h3>
               <div className="social-links">
-                <a href="#" class="social-link">
+                <a href="#" className="social-link">
                   <FaFacebook />
                 </a>
-                <a href="#" class="social-link">
+                <a href="#" className="social-link">
                   <FaTwitter />
                 </a>
-                <a href="#" class="social-link">
+                <a href="#" className="social-link">
                   <FaInstagram />
                 </a>
-                <a href="#" class="social-link">
+                <a href="#" className="social-link">
                   <FaLinkedin />
                 </a>
               </div>

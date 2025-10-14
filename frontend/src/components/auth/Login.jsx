@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "./Auth.css";
 import EnumService from "../../services/enum";
 import { apiHelper } from "../../services/apiHelper";
 
@@ -39,75 +40,54 @@ const Login = () => {
   };
 
   return (
-    /**https://v2.tailwindcss.com/docs */
-    <div className="font-poppins min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600 p-5">
-      <div className="bg-white rounded-xl shadow-2xl p-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className=" text-[26px] text-gray-800 font-bold mb-2">
-            Bow Course Registration
-          </h1>
-          <h2 className="text-purple-500 text-[20px] font-medium">Login</h2>
+    <div className="auth-container">
+      <div className="auth-card small">
+        <div className="auth-header">
+          <h1 className="auth-title">Bow Course Registration</h1>
+          <h2 className="auth-subtitle">Login</h2>
         </div>
 
-        {error && (
-          <div className=" bg-red-50 text-red-700 p-3 rounded-lg mb-5 border-l-4 border-red-700">
-            {error}
-          </div>
-        )}
+        {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className=" block mb-2 text-gray-700 font-medium">
-              Username
-            </label>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label className="form-label">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               placeholder="Enter your username"
-              className=" w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+              className="form-input"
             />
           </div>
 
-          <div>
-            <label className=" block mb-2 text-gray-700 font-medium">
-              Password
-            </label>
+          <div className="form-group">
+            <label className="form-label">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Enter your password"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-purple-600 transition-colors"
+              className="form-input"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className=" w-full py-3 bg-purple-600 text-white rounded-lg text-base font-semibold hover:bg-purple-700"
-          >
+          <button type="submit" disabled={loading} className="auth-button">
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        <div className="mt-5 text-center space-y-2 text-[14px]">
-          <p className=" text-gray-600">
+        <div className="auth-footer">
+          <p className="footer-text">
             Don't have an account?{" "}
-            <Link
-              to="/register"
-              className=" text-purple-600 font-semibold hover:underline"
-            >
+            <Link to="/register" className="footer-link">
               Sign up
             </Link>
           </p>
           <p>
-            <Link
-              to="/"
-              className=" text-purple-500 font-semibold hover:underline"
-            >
+            <Link to="/" className="view-courses-link">
               View Courses
             </Link>
           </p>

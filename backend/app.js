@@ -21,13 +21,14 @@ const adminRoutes = require("./routes/admin");
 const studentRoutes = require("./routes/students");
 
 const allowedOrigins = [
-  "", // local server [UI]
+  "https://bow-course-registration-puce.vercel.app", // vercel UI
+  "http://localhost:3000", // local server [UI]
 ];
 
 // CORS Middleware
 app.use(
   cors({
-    origin: "*", // TODO: Change this * to allowedOrigins.
+    origin: allowedOrigins,
     methods: "GET,POST,PUT,DELETE,OPTIONS",
     allowedHeaders: "Content-Type,Authorization",
     credentials: true,
