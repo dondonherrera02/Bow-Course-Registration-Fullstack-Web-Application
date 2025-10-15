@@ -18,6 +18,8 @@ import AdminProfile from "./components/admin/Profile";
 import AdminCourses from "./components/admin/Courses";
 import AdminStudents from "./components/admin/Student";
 import AdminContactForms from "./components/admin/ContactForms";
+import StudentCourses from "./components/student/Courses";
+import StudentProfile from "./components/student/Profile";
 
 import "./App.css";
 
@@ -46,6 +48,24 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Student Routes */}
+          <Route
+            path="/student/profile"
+            element={
+              <ProtectedRoute allowedRole="student">
+                <StudentProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/courses"
+            element={
+              <ProtectedRoute allowedRole="student">
+                <StudentCourses />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Admin Routes */}
           <Route
