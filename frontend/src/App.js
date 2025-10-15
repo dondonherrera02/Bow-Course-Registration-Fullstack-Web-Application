@@ -18,6 +18,9 @@ import AdminProfile from "./components/admin/Profile";
 import AdminCourses from "./components/admin/Courses";
 import AdminStudents from "./components/admin/Student";
 import AdminContactForms from "./components/admin/ContactForms";
+
+/*Student Pages */
+import StudentDashboard from "./components/student/Dashboard";
 import StudentCourses from "./components/student/Courses";
 import StudentProfile from "./components/student/Profile";
 
@@ -50,6 +53,14 @@ function App() {
           <Route path="/register" element={<Register />} />
 
           {/* Student Routes */}
+          <Route
+            path="/student/dashboard"
+            element={
+              <ProtectedRoute allowedRole="student">
+                <StudentDashboard/>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/student/profile"
             element={
