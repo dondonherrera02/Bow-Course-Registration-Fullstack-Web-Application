@@ -10,7 +10,38 @@
     "program": "SDD",
     "username": "dondon",
     "hashedPassword": "$2b$10$/CTYILxsxkjrPUorCoBDW.g5HdWW/hpxxSQ.vj4KnykTwcZcrTQYC",
-    "registeredCourses": [],
+    "registeredCourses": [
+      {
+        "courseCode": "COMP1102",
+        "courseName": "Computer Fundamentals",
+        "term": "Fall",
+        "registrationDate": "2025-10-15T03:26:15.271Z"
+      },
+      {
+        "courseCode": "DBAS1203",
+        "courseName": "Database Systems",
+        "term": "Fall",
+        "registrationDate": "2025-10-15T03:26:17.267Z"
+      },
+      {
+        "courseCode": "NETW1301",
+        "courseName": "Networking Basics",
+        "term": "Fall",
+        "registrationDate": "2025-10-15T03:26:19.028Z"
+      },
+      {
+        "courseCode": "JAVA1204",
+        "courseName": "Java Programming",
+        "term": "Fall",
+        "registrationDate": "2025-10-15T03:26:20.642Z"
+      },
+      {
+        "courseCode": "PROJ2102",
+        "courseName": "Project Management",
+        "term": "Fall",
+        "registrationDate": "2025-10-15T03:26:22.255Z"
+      }
+    ],
     "createdAt": "2025-10-07T16:25:17.811Z"
   }
 ]
