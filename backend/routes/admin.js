@@ -19,10 +19,19 @@ router.get("/students", verifyToken, (req, res) => {
   }
 
   const students = readJSON("students.json");
+  const programs = readJSON("programs.json");
 
-  // Remove passwords from response
+  // Build lookup map for fast access
+  const programMap = {};
+  programs.forEach((prg) => {
+    programMap[prg.code] = prg.name;
+  });
+
   const studentsWithoutPasswords = students.map(
-    ({ password, ...student }) => student
+    ({ hashedPassword, password, ...student }) => {
+      const programName = programMap[student.program] || null;
+      return { ...student, programName };
+    }
   );
 
   res.json(studentsWithoutPasswords);
