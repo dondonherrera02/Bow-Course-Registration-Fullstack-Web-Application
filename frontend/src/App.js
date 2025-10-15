@@ -23,6 +23,8 @@ import AdminContactForms from "./components/admin/ContactForms";
 import StudentDashboard from "./components/student/Dashboard";
 import StudentCourses from "./components/student/Courses";
 import StudentProfile from "./components/student/Profile";
+import StudentContact from "./components/student/Contact";
+
 
 import "./App.css";
 
@@ -74,6 +76,14 @@ function App() {
             element={
               <ProtectedRoute allowedRole="student">
                 <StudentCourses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/contact"
+            element={
+              <ProtectedRoute allowedRole="student">
+                <StudentContact />
               </ProtectedRoute>
             }
           />
