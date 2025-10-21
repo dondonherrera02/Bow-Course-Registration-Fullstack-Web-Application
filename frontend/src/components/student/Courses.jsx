@@ -1,34 +1,46 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../common/Sidebar";
 import EnumService from "../../services/enum";
 import { apiHelper } from "../../services/apiHelper";
 import { toast } from "react-toastify";
 import "./Student.css";
 
+// Get the API base URL from EnumService
 const { BOW_COURSE_APP_API_URL } = EnumService();
 
 const StudentCourses = () => {
-  const [courses, setCourses] = useState([]);
-  const [studentData, setStudentData] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTerm, setSelectedTerm] = useState("All");
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
+  // ==========================
+  // STATE VARIABLES
+  // ==========================
+  const [courses, setCourses] = useState([]); // List of all available courses
+  const [studentData, setStudentData] = useState(null); // Logged-in student's data (profile, registered courses, etc.)
+  const [searchQuery, setSearchQuery] = useState(""); // User's search input for filtering courses
+  const [selectedTerm, setSelectedTerm] = useState("All"); // Selected academic term (Fall, Winter, etc.)
+  const [selectedCourse, setSelectedCourse] = useState(null); // Currently selected course for viewing/registering
+  const [showModal, setShowModal] = useState(false); // Whether to show or hide the course details modal
+  const [message, setMessage] = useState(""); // Message displayed for errors or updates
+  const [loading, setLoading] = useState(true); // Loading indicator while data is being fetched
+
+  // Retrieve authentication token from local storage (used for API requests)
   const token = localStorage.getItem("token");
 
+  // ==========================
+  // INITIAL DATA FETCH
+  // ==========================
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Fetch student data and available courses from the backend
   const fetchData = async () => {
     try {
+      // Run both API calls at the same time to improve performance
       const [coursesData, studentDataRes] = await Promise.all([
         apiHelper.get(`${BOW_COURSE_APP_API_URL}/courses`),
         apiHelper.get(`${BOW_COURSE_APP_API_URL}/students/profile`, token),
       ]);
 
+      // Update state with data
       setCourses(coursesData);
       setStudentData(studentDataRes);
     } catch (err) {
@@ -39,15 +51,24 @@ const StudentCourses = () => {
     }
   };
 
+  // ==========================
+  // COURSE FILTERING LOGIC
+  // ==========================
   const filteredCourses = courses.filter(
     (course) =>
+      // Filter by course code or name
       (course.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.name?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      // Filter by selected term (or show all if 'All' is selected)
       (selectedTerm === "All" ||
         course.term?.toLowerCase() === selectedTerm.toLowerCase()) &&
+      // Only show courses that belong to the student's program
       course.programCode === studentData?.program
   );
 
+  // ==========================
+  // CHECK IF STUDENT IS REGISTERED FOR A COURSE
+  // ==========================
   const isRegistered = (courseCode, courseTerm) => {
     if (selectedTerm === "All") {
       return studentData?.registeredCourses?.some(
@@ -59,11 +80,17 @@ const StudentCourses = () => {
     );
   };
 
+  // ==========================
+  // COURSE ACTION HANDLERS
+  // ==========================
+
+  // When "View" button is clicked, show the modal with course details
   const handleViewCourse = (course) => {
     setSelectedCourse(course);
     setShowModal(true);
   };
 
+  // Register a student for the selected course
   const handleRegisterCourse = async () => {
     if (!selectedCourse) return;
 
@@ -80,7 +107,7 @@ const StudentCourses = () => {
       );
 
       toast.success("Course registered successfully!");
-      fetchData();
+      fetchData(); // Refresh course and student data
       setShowModal(false);
     } catch (err) {
       const errorMessage = err.message || "Error registering course";
@@ -89,7 +116,9 @@ const StudentCourses = () => {
     }
   };
 
+  // Unregister a student from a course
   const handleRemoveCourse = async (course) => {
+    // Confirm before deleting
     if (!window.confirm("Are you sure you want to remove this course?")) {
       return;
     }
@@ -107,7 +136,7 @@ const StudentCourses = () => {
       );
 
       toast.success("Course removed successfully!");
-      fetchData();
+      fetchData(); // Refresh data after removing
     } catch (err) {
       const errorMessage = err.message || "Error removing course";
       toast.error(errorMessage);
@@ -115,6 +144,7 @@ const StudentCourses = () => {
     }
   };
 
+  // Get the list of registered courses in the selected term
   const registeredCoursesInTerm =
     selectedTerm === "All"
       ? studentData?.registeredCourses || []
@@ -122,6 +152,9 @@ const StudentCourses = () => {
           (c) => c.term === selectedTerm
         ) || [];
 
+  // ==========================
+  // LOADING STATE
+  // ==========================
   if (loading) {
     return (
       <Sidebar role="student">
@@ -130,11 +163,17 @@ const StudentCourses = () => {
     );
   }
 
+  // ==========================
+  // MAIN RENDER
+  // ==========================
   return (
     <Sidebar role="student">
       <div className="courses-container">
+        {/* ===== HEADER SECTION ===== */}
         <div className="courses-header">
           <h2>Course Registration</h2>
+
+          {/* Dropdown for selecting term */}
           <div className="term-selector">
             <label>Select Term:</label>
             <select
@@ -149,14 +188,17 @@ const StudentCourses = () => {
           </div>
         </div>
 
+        {/* Display error or status messages */}
         {message && <div className="message">{message}</div>}
 
+        {/* Show how many courses the student has registered */}
         <div className="registration-info">
           <p>
             Registered Courses: {registeredCoursesInTerm.length}/5 (maximum 5)
           </p>
         </div>
 
+        {/* ===== SEARCH BAR ===== */}
         <div className="search-bar">
           <input
             type="text"
@@ -166,6 +208,7 @@ const StudentCourses = () => {
           />
         </div>
 
+        {/* ===== COURSES TABLE ===== */}
         <div className="table-responsive">
           <table className="data-table">
             <thead>
@@ -182,7 +225,9 @@ const StudentCourses = () => {
                 <th>Actions</th>
               </tr>
             </thead>
+
             <tbody>
+              {/* If no courses found, show message */}
               {filteredCourses.length === 0 ? (
                 <tr>
                   <td colSpan="10" style={{ textAlign: "center" }}>
@@ -193,6 +238,7 @@ const StudentCourses = () => {
                 filteredCourses.map((course) => {
                   const registered = isRegistered(course.code, course.term);
                   const isFull = course.enrolled >= course.capacity;
+
                   return (
                     <tr key={course.code}>
                       <td>{course.code}</td>
@@ -213,6 +259,7 @@ const StudentCourses = () => {
                         )}
                       </td>
                       <td>
+                        {/* Show "Remove" button if registered, otherwise "View" button */}
                         {registered ? (
                           <button
                             className="btn-danger btn-sm"
@@ -238,6 +285,7 @@ const StudentCourses = () => {
           </table>
         </div>
 
+        {/* ===== COURSE DETAILS MODAL ===== */}
         {showModal && selectedCourse && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -250,6 +298,8 @@ const StudentCourses = () => {
                   ×
                 </button>
               </div>
+
+              {/* Modal body showing full course info */}
               <div className="modal-body">
                 <div className="course-details">
                   <div className="detail-item">
@@ -285,6 +335,8 @@ const StudentCourses = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Modal footer with action buttons */}
               <div className="modal-footer">
                 <button
                   className="btn-secondary"
