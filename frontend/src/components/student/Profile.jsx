@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../common/Sidebar";
 import EnumService from "../../services/enum";
 import { apiHelper } from "../../services/apiHelper";
@@ -6,20 +6,35 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./Student.css";
 
-// Get the default backend API URL from the EnumService.
+// Get the backend API base URL from EnumService.
+// This helps keep URLs consistent and easy to update.
 const { BOW_COURSE_APP_API_URL } = EnumService();
 
 const StudentProfile = () => {
+  // Store the student's profile data retrieved from the backend.
   const [studentData, setStudentData] = useState(null);
+
+  // Determines if the profile is currently being edited.
   const [isEditing, setIsEditing] = useState(false);
+
+  // Holds editable form data (like name, email, password, etc.).
   const [formData, setFormData] = useState({});
+
+  // Tracks whether the page is still fetching data.
   const [loading, setLoading] = useState(true);
+
+  // Retrieve the authentication token saved during login.
   const token = localStorage.getItem("token");
 
+  // useEffect is used to load the student profile when the component first renders.
   useEffect(() => {
     fetchStudentData();
-  }, []);
+  }, []); // [] to prevent infinite re-renders.
 
+  /**
+   * Fetches the student's profile information from the backend.
+   * This function runs once when the component mounts.
+   */
   const fetchStudentData = async () => {
     try {
       const data = await apiHelper.get(
@@ -27,7 +42,10 @@ const StudentProfile = () => {
         token
       );
 
+      // Save the fetched data to state.
       setStudentData(data);
+
+      // Initialize form fields with the current profile info.
       setFormData({
         firstName: data.firstName,
         lastName: data.lastName,
@@ -40,23 +58,35 @@ const StudentProfile = () => {
       console.error("Error fetching student data:", err);
       toast.error("Failed to load profile data");
     } finally {
+      // Stop showing the loading indicator once the API call is done.
       setLoading(false);
     }
   };
 
+  /**
+   * Updates the formData state whenever a user types into an input field.
+   */
   const handleChange = (e) => {
+    // Keep all existing values and update only the changed one.
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  /**
+   * Sends the updated profile data to the backend API.
+   */
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent the default form reload behavior.
 
     try {
+      // Create a copy of the current form data.
       const updateData = { ...formData };
+
+      // Remove password fields if they’re not being updated.
       if (!updateData.password) {
         delete updateData.password;
       }
 
+      // Send the updated profile to the backend.
       await apiHelper.put(
         `${BOW_COURSE_APP_API_URL}/students/profile`,
         updateData,
@@ -64,13 +94,18 @@ const StudentProfile = () => {
       );
 
       toast.success("Profile updated successfully!");
+
+      // Exit edit mode after saving.
       setIsEditing(false);
+
+      // Refresh the data to display updated info.
       fetchStudentData();
     } catch (err) {
       toast.error(err.message || "Error updating profile");
     }
   };
 
+  // Display loading indicator while fetching data.
   if (loading) {
     return (
       <Sidebar role="student">
@@ -79,8 +114,10 @@ const StudentProfile = () => {
     );
   }
 
+  // UI Rendering
   return (
     <Sidebar role="student">
+      {/* Toast container handles success/error popup messages */}
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -92,11 +129,16 @@ const StudentProfile = () => {
         draggable
         pauseOnHover
       />
+
       <div className="profile-container">
+        {/* ===== PROFILE HEADER SECTION ===== */}
         <div className="profile-header">
+          {/* Avatar circle shows the first letter of the student’s first name */}
           <div className="profile-avatar">
             <div className="avatar-circle">{studentData?.firstName?.[0]}</div>
           </div>
+
+          {/* Display student's name and ID */}
           <div className="profile-info">
             <h2>
               {studentData?.firstName} {studentData?.lastName}
@@ -105,10 +147,14 @@ const StudentProfile = () => {
           </div>
         </div>
 
+        {/* ===== PROFILE DETAILS SECTION ===== */}
         <div className="profile-sections">
+          {/* === Personal Information === */}
           <section className="profile-section">
             <div className="section-header">
               <h3>Personal Information</h3>
+
+              {/* Show "Edit Profile" button only if not editing */}
               {!isEditing && (
                 <button
                   className="btn-secondary"
@@ -119,8 +165,10 @@ const StudentProfile = () => {
               )}
             </div>
 
+            {/* === Edit Mode Form === */}
             {isEditing ? (
               <form onSubmit={handleSubmit} className="profile-form">
+                {/* Name fields side by side */}
                 <div className="form-row">
                   <div className="form-group">
                     <label>First Name</label>
@@ -144,6 +192,7 @@ const StudentProfile = () => {
                   </div>
                 </div>
 
+                {/* Contact information */}
                 <div className="form-group">
                   <label>Email</label>
                   <input
@@ -165,6 +214,7 @@ const StudentProfile = () => {
                   />
                 </div>
 
+                {/* Optional password change fields */}
                 <div className="form-group">
                   <label>Current Password</label>
                   <input
@@ -187,6 +237,7 @@ const StudentProfile = () => {
                   />
                 </div>
 
+                {/* Save and Cancel buttons */}
                 <div className="form-actions">
                   <button type="submit" className="btn-primary">
                     Save Changes
@@ -201,6 +252,7 @@ const StudentProfile = () => {
                 </div>
               </form>
             ) : (
+              // === Read-Only View Mode ===
               <div className="info-grid">
                 <div className="info-item">
                   <label>First Name</label>
@@ -230,6 +282,7 @@ const StudentProfile = () => {
             )}
           </section>
 
+          {/* === Academic Information Section === */}
           <section className="profile-section">
             <h3>Academic Information</h3>
             <div className="info-grid">
