@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../common/Sidebar";
 import EnumService from "../../services/enum";
 import { apiHelper } from "../../services/apiHelper";
