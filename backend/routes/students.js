@@ -238,8 +238,6 @@ router.put("/unregister-course", verifyToken, (req, res) => {
     });
   }
 
-  /*
-  TODO: To be confirmed the requirements
   // Check minimum course requirement (at least 2 courses per term)
   const coursesInTerm = student.registeredCourses.filter(
     (reg) => reg.term === term
@@ -249,7 +247,7 @@ router.put("/unregister-course", verifyToken, (req, res) => {
     return res.status(400).json({
       error: "Minimum 2 courses required per term",
     });
-  }*/
+  }
 
   // Remove the registration
   student.registeredCourses.splice(registrationIndex, 1);

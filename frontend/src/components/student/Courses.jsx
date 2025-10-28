@@ -194,7 +194,8 @@ const StudentCourses = () => {
         {/* Show how many courses the student has registered */}
         <div className="registration-info">
           <p>
-            Registered Courses: {registeredCoursesInTerm.length}/5 (maximum 5)
+            Registered Courses: {registeredCoursesInTerm.length}/5 (minimum 2,
+            maximum 5)
           </p>
         </div>
 
