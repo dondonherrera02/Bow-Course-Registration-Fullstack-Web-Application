@@ -1,4 +1,5 @@
 // apiHelper.js
+
 const request = async (url, method = "GET", data = null, token = null) => {
   try {
     const headers = { "Content-Type": "application/json" };
@@ -6,16 +7,26 @@ const request = async (url, method = "GET", data = null, token = null) => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const options = { method, headers };
+    const options = {
+      method,
+      headers,
+      credentials: "include", // Ensures cookies/credentials sent on cross-origin (CORS) requests
+    };
     if (data) {
       options.body = JSON.stringify(data);
     }
 
     const response = await fetch(url, options);
 
+    // Handle non-OK responses and ensure CORS errors/messages can be seen
     if (!response.ok) {
-      const errorBody = await response.json();
-      const errorMessage = errorBody.error || "Unknown error";
+      let errorMessage = "Unknown error";
+      try {
+        const errorBody = await response.json();
+        errorMessage = errorBody.error || errorMessage;
+      } catch {
+        errorMessage = response.statusText || errorMessage;
+      }
       console.error("Response Error Message:", errorMessage);
       throw new Error(errorMessage);
     }
