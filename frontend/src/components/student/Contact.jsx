@@ -9,18 +9,12 @@ import "./Student.css";
 const { BOW_COURSE_APP_API_URL } = EnumService();
 
 const StudentContact = () => {
-  // ==========================
-  // STATE VARIABLES
-  // ==========================
   const [message, setMessage] = useState(""); // Holds the message the student types in
   const [loading, setLoading] = useState(false); // Controls the "Sending..." state of the button
 
   // Retrieve token for authentication (stored during login)
   const token = localStorage.getItem("token");
 
-  // ==========================
-  // HANDLE FORM SUBMISSION
-  // ==========================
   const handleSubmit = async (e) => {
     e.preventDefault(); // Prevents page reload on form submit
     setLoading(true); // Show loading state while sending message
@@ -46,9 +40,6 @@ const StudentContact = () => {
     }
   };
 
-  // ==========================
-  // UI RENDERING
-  // ==========================
   return (
     // Sidebar layout for student users
     <Sidebar role="student">
