@@ -19,6 +19,8 @@ const courseRoutes = require("./routes/courses");
 const programRoutes = require("./routes/programs");
 const adminRoutes = require("./routes/admin");
 const studentRoutes = require("./routes/students");
+const { connectDB } = require("./utils/mongodb.js");
+
 
 const allowedOrigins = [
   "https://bow-course-registration-puce.vercel.app", // vercel UI
@@ -51,9 +53,11 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 8080;
+/*const PORT = process.env.PORT || 8080;
 app.listen(PORT, () =>
   console.log(`Server running on http://localhost:${PORT}/swagger`)
 );
 
-SwaggerDocs(app, PORT);
+SwaggerDocs(app, PORT);*/
+connectDB();
+
