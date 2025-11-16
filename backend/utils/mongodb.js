@@ -11,7 +11,7 @@ const connectDB = async () => {
 
 	try {
 		await mongoose.connect(uri);
-		 db = mongoose.connection; // assign the connection to db variable
+		 db = mongoose.data; // assign the connection to db variable
 		console.log('MongoDB connected');
 	} catch (err) {
 		console.error('MongoDB connection error:', err);

@@ -19,13 +19,11 @@ const courseRoutes = require("./routes/courses");
 const programRoutes = require("./routes/programs");
 const adminRoutes = require("./routes/admin");
 const studentRoutes = require("./routes/students");
-const { connectDB } = require("./utils/mongodb.js");
-
-
 const allowedOrigins = [
   "https://bow-course-registration-puce.vercel.app", // vercel UI
   "http://localhost:3000", // local server [UI]
 ];
+const { connectDB } = require("./utils/mongodb");
 
 // CORS Middleware
 app.use(
@@ -52,12 +50,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-// Start server
-/*const PORT = process.env.PORT || 8080;
-app.listen(PORT, () =>
-  console.log(`Server running on http://localhost:${PORT}/swagger`)
-);
+// Start server with MongoDB connection
+const PORT = process.env.PORT || 8080;
 
-SwaggerDocs(app, PORT);*/
-connectDB();
+(async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}/swagger`)
+    );
+    SwaggerDocs(app, PORT);
+  } catch (err) {
+    console.error('Failed to start server due to DB error:', err);
+    process.exit(1);
+  }
+})();
+
 

@@ -17,8 +17,122 @@ const {
 } = require("../utils/authHelper");
 const { findUserByField, prepareUserResponse } = require("../utils/userHelper");
 
-// Login route
+// Register new student (MongoDB based)
+router.post("/register", async (req, res) => {
+  try {
+    const {
+      firstName, lastName, email, phone, birthday,
+      program, username, password
+    } = req.body;
+
+    if (!firstName || !lastName || !email || !username || !password) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const Student = require("../models/Student");
+
+    if (await Student.findOne({ username })) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+    if (await Student.findOne({ email })) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
+    const year = new Date().getFullYear();
+    const count = await Student.countDocuments();
+    const studentId = `STUD${year}${String(count + 1).padStart(3, "0")}`;
+
+    const hashedPassword = await hashPassword(password);
+
+    const newStudent = await Student.create({
+      studentId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      birthday,
+      program,
+      username,
+      hashedPassword,
+      registeredCourses: []
+    });
+
+    // don't return hashedPassword
+    const safeStudent = newStudent.toObject();
+    delete safeStudent.hashedPassword;
+
+    const token = require("../utils/authHelper").generateToken({
+      id: newStudent._id.toString(),
+      username: newStudent.username,
+      role: roleEnum.STUDENT || "student",
+    });
+
+    res.status(201).json({ message: "Student registered", student: safeStudent, token });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Login route (MongoDB based)
 router.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+
+    const Student = require("../models/Student");
+    const Admin = require("../models/Admin");
+
+    // Try student login
+    let user = await Student.findOne({ username });
+    if (user) {
+      const valid = await bcrypt.compare(password, user.hashedPassword);
+      if (!valid) return res.status(401).json({ error: "Invalid password" });
+
+      const token = require("../utils/authHelper").generateToken({
+        id: user._id.toString(),
+        username: user.username,
+        role: roleEnum.STUDENT || "student",
+      });
+
+      const safeUser = user.toObject();
+      delete safeUser.hashedPassword;
+      return res.json({ message: "Login successful", user: safeUser, token });
+    }
+
+    // Try admin login
+    user = await Admin.findOne({ username });
+    if (user) {
+      const valid = await bcrypt.compare(password, user.hashedPassword);
+      if (!valid) return res.status(401).json({ error: "Invalid password" });
+
+      const token = require("../utils/authHelper").generateToken({
+        id: user._id.toString(),
+        username: user.username,
+        role: roleEnum.ADMIN || "admin",
+      });
+
+      const safeUser = user.toObject();
+      delete safeUser.hashedPassword;
+      return res.json({ message: "Login successful", user: safeUser, token });
+    }
+
+    // no user found
+    return res.status(401).json({ error: "Invalid credentials" });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+
+
+// Login route(JSON_file based)
+/*router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -43,10 +157,10 @@ router.post("/login", async (req, res) => {
 
   // If no valid user found
   return res.status(401).json({ error: "Invalid credentials" });
-});
+});*/
 
-// Register new student
-router.post("/register", async (req, res) => {
+// Register new student(JSON_file based) route
+/*router.post("/register", async (req, res) => {
   const {
     firstName,
     lastName,
@@ -103,6 +217,8 @@ router.post("/register", async (req, res) => {
     message: "Student registered successfully",
     studentId: newStudent.id,
   });
-});
+});*/
+
+
 
 module.exports = router;
