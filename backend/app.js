@@ -9,10 +9,28 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const dotenv = require("dotenv");
+const { MongoClient } = require("mongodb");
 const { SwaggerDocs } = require("./swagger.js");
 
 // set up global configuration access - .env file
 dotenv.config();
+
+// MongoDB Connection
+const mongoURI = process.env.MONGODB_URI;
+const client = new MongoClient(mongoURI);
+
+async function connectToMongoDB() {
+  try {
+    await client.connect();
+    console.log("Successfully connected to MongoDB!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
+  }
+}
+
+// Connect to MongoDB
+connectToMongoDB();
 
 const authRoutes = require("./routes/auth");
 const courseRoutes = require("./routes/courses");
@@ -57,3 +75,14 @@ app.listen(PORT, () =>
 );
 
 SwaggerDocs(app, PORT);
+
+// If the app is stopped, close the MongoDB connection safely before exiting.
+process.on("SIGINT", async () => {
+  console.log("\nClosing MongoDB connection...");
+  await client.close();
+  console.log("MongoDB connection closed.");
+  process.exit(0);
+});
+
+// Export client for use in other modules
+module.exports = { client };
