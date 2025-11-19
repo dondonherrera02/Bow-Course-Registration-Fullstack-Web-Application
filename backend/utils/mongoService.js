@@ -49,6 +49,35 @@ async function exists(collectionName, query) {
   }
 }
 
+async function generateStudentIdDb() {
+  const db = getDatabase();
+  const c = db.collection("students");
+  const year = new Date().getFullYear();
+  const count = await c.countDocuments();
+  return `STUD${year}${String(count + 1).padStart(3, "0")}`;
+}
+
+async function generateAdminIdDb() {
+  const db = getDatabase();
+  const c = db.collection("admins");
+
+  // Get the highest existing adminId number, then +1
+  const cursor = c.find({}, { projection: { adminId: 1 } });
+  let max = 0;
+
+  await cursor.forEach(doc => {
+    const id = doc && (doc.adminId || doc.id || doc._id && doc._id.toString());
+    if (!id) return;
+    const m = id.toString().match(/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+
+  const next = max + 1;
+  return `ADMIN${String(next).padStart(3, "0")}`;
+}
 // TODO: Create additional functions such as updateOne, deleteOne, etc.
 
 module.exports = {
@@ -56,4 +85,7 @@ module.exports = {
   createDocument,
   findOne,
   exists,
+  generateStudentIdDb,
+  generateAdminIdDb
+  
 };
