@@ -10,7 +10,7 @@ const { readJSON } = require("./fileOperations");
 const { roleEnum } = require("./enum");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "bowcourse-secret-key-2025";
-
+const { getDatabase } = require("./mongoService");
 // Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
@@ -18,6 +18,12 @@ const generateToken = (user) => {
       id: user.id,
       username: user.username,
       role: user.role,
+      studentId: user.studentId,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      birthday: user.birthday
     },
     JWT_SECRET,
     { expiresIn: "24h" }
@@ -51,7 +57,7 @@ const verifyAdmin = (req, res, next) => {
 
 // Generate student ID
 async function generateStudentIdDb() {
-  const db = getDatabase();
+  const db = await getDatabase();
   const c = db.collection("students");
   const year = new Date().getFullYear();
   const count = await c.countDocuments();
@@ -59,7 +65,7 @@ async function generateStudentIdDb() {
 }
 // Generate admin ID
 async function generateAdminIdDb() {
-  const db = getDatabase();
+  const db = await getDatabase();
   const c = db.collection("admins");
 
   // Get the highest existing adminId number, then +1
