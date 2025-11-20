@@ -6,6 +6,7 @@
  */
 
 const express = require("express");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const { verifyToken } = require("../utils/authHelper");
 const { validateCourseFields } = require("../utils/courseHelper");
 const { findMany, findOne, createDocument, exists, updateOne, deleteOne } = require("../utils/mongoService");
@@ -15,7 +16,7 @@ const router = express.Router();
 // Get all courses (public)
 router.get("/", async (req, res) => {
   try {
-    const courses = await findMany("courses", {});
+    const courses = await findMany(collectionEnum.COURSES, {});
     const coursesWithSlots = (courses || []).map((course) => ({
       ...course,
       remainingSlots: (course.capacity || 0) - (course.enrolled || 0),
@@ -31,7 +32,7 @@ router.get("/", async (req, res) => {
 // Get course by code
 router.get("/:code", async (req, res) => {
   try {
-    const course = await findOne("courses", { code: req.params.code });
+    const course = await findOne(collectionEnum.COURSES, { code: req.params.code });
     if (!course) return res.status(404).json({ error: "Course not found" });
     const courseWithSlots = {
       ...course,
@@ -47,7 +48,7 @@ router.get("/:code", async (req, res) => {
 
 // Create new course (Admin only)
 router.post("/", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
@@ -96,12 +97,12 @@ router.post("/", verifyToken, async (req, res) => {
   } = req.body;
 
   // Check if course code already exists
-  if (await exists("courses", { code })) {
+  if (await exists(collectionEnum.COURSES, { code })) {
     return res.status(400).json({ error: "Course code already exists" });
   }
 
   // Check program exists
-  if (!(await exists("programs", { code: programCode }))) {
+  if (!(await exists(collectionEnum.PROGRAMS, { code: programCode }))) {
     return res.status(400).json({ error: "Program code not registered" });
   }
 
@@ -121,7 +122,7 @@ router.post("/", verifyToken, async (req, res) => {
     updatedAt: new Date().toISOString(),
   };
 
-  await createDocument("courses", newCourse);
+  await createDocument(collectionEnum.COURSES, newCourse);
 
   res.status(201).json({
     message: "Course created successfully",
@@ -131,11 +132,11 @@ router.post("/", verifyToken, async (req, res) => {
 
 // Update course (Admin only)
 router.put("/:code", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const existingCourse = await findOne("courses", { code: req.params.code });
+  const existingCourse = await findOne(collectionEnum.COURSES, { code: req.params.code });
   if (!existingCourse) return res.status(404).json({ error: "Course not found" });
 
   const { name, term, startDate, endDate, description, capacity, programCode } = req.body;
@@ -176,25 +177,26 @@ router.put("/:code", verifyToken, async (req, res) => {
   if (description) updateFields.description = description;
   if (capacity !== undefined) updateFields.capacity = capacity;
   if (programCode) updateFields.programCode = programCode;
-  updateFields.updatedBy = req.user.username;
-  updateFields.updatedAt = new Date();
 
-  await updateOne("courses", { code: req.params.code }, { $set: updateFields });
-  const updated = await findOne("courses", { code: req.params.code });
+  updateFields.updatedBy = req.user.username;
+  updateFields.updatedAt = new Date().toISOString();
+
+  await updateOne(collectionEnum.COURSES, { code: req.params.code }, { $set: updateFields });
+  const updated = await findOne(collectionEnum.COURSES, { code: req.params.code });
 
   res.json({ message: "Course updated successfully", course: updated });
 });
 
 // Delete course (Admin only)
 router.delete("/:code", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const existing = await findOne("courses", { code: req.params.code });
+  const existing = await findOne(collectionEnum.COURSES, { code: req.params.code });
   if (!existing) return res.status(404).json({ error: "Course not found" });
 
-  await deleteOne("courses", { code: req.params.code });
+  await deleteOne(collectionEnum.COURSES, { code: req.params.code });
   res.json({ message: "Course deleted successfully" });
 });
 

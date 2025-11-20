@@ -141,7 +141,7 @@ router.post("/register-admin", async (req, res) => {
       role: roleEnum.ADMIN,
       hashedPassword: hashed,
       createdAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     // Insert admin into MongoDB using helper
     await createDocument(collectionEnum.ADMINS, newAdmin);

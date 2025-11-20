@@ -10,15 +10,17 @@ const roleEnum = Object.freeze({
   ADMIN: "admin",
 
   isValidRole(role) {
-    return Object.values(this).includes(role);
+    return Object.values(roleEnum).includes(role);
   },
 });
+
 
 const collectionEnum = Object.freeze({
   STUDENTS: "students",
   ADMINS: "admins",
   COURSES: "courses",
-  CONTACTFORMS: "contact-forms"
+  CONTACTFORMS: "contact-forms",
+  PROGRAMS: "programs",
 });
 
 module.exports = {
