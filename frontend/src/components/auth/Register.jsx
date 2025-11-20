@@ -54,7 +54,7 @@ const Signup = () => {
 
     try {
       const data = await apiHelper.post(
-        `${BOW_COURSE_APP_API_URL}/auth/register`,
+        `${BOW_COURSE_APP_API_URL}/auth/register-student`,
         {
           firstName: formData.firstName,
           lastName: formData.lastName,
