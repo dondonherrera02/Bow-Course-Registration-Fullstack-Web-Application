@@ -5,25 +5,19 @@
  * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
  */
 
-const { readJSON } = require("../utils/fileOperations");
 const { roleEnum } = require("../utils/enum");
 const { generateToken } = require("./authHelper");
 
-function findUserByField(filename, field, value) {
-  const users = readJSON(filename);
-  return users.find((u) => u[field] === value);
-}
-
-function prepareUserResponse(user, role) {
+function prepareUserResponse(user) {
   const commonUserData = {
-    id: user.id,
-    role,
+    id: user.userId,
+    role: user.role,
     email: user.email,
   };
 
-  if (role === roleEnum.STUDENT) {
+  if (commonUserData.role === roleEnum.STUDENT) {
     return {
-      token: generateToken({ ...user, role }),
+      token: generateToken(user),
       user: {
         ...commonUserData,
         name: `${user.firstName} ${user.lastName}`,
@@ -31,9 +25,9 @@ function prepareUserResponse(user, role) {
         program: user.program,
       },
     };
-  } else if (role === roleEnum.ADMIN) {
+  } else if (commonUserData.role === roleEnum.ADMIN) {
     return {
-      token: generateToken({ ...user, role }),
+      token: generateToken(user),
       user: {
         ...commonUserData,
         name: user.name,
@@ -43,6 +37,5 @@ function prepareUserResponse(user, role) {
 }
 
 module.exports = {
-  findUserByField,
   prepareUserResponse,
 };

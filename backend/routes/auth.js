@@ -7,12 +7,14 @@
 
 const express = require("express");
 const router = express.Router();
-const { roleEnum } = require("../utils/enum");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const bcrypt = require("bcrypt");
-const { hashPassword,
+const {
+  hashPassword,
   validateRegistrationFields,
   generateStudentIdDb,
-  generateAdminIdDb } = require("../utils/authHelper");
+  generateAdminIdDb,
+} = require("../utils/authHelper");
 const { prepareUserResponse } = require("../utils/userHelper");
 
 const { findOne, createDocument, exists } = require("../utils/mongoService");
@@ -27,22 +29,20 @@ router.post("/login", async (req, res) => {
 
   try {
     // Try student login (use helper)
-    let user = await findOne("students", { username: username });
+    let user = await findOne(collectionEnum.STUDENTS, { username: username });
+
     if (user) {
       const valid = await bcrypt.compare(password, user.hashedPassword || "");
       if (!valid) return res.status(401).json({ error: "Invalid password" });
-      // ensure user.id exists for token
-      user.id = user.studentId || (user._id && user._id.toString());
-      return res.json(prepareUserResponse(user, roleEnum.STUDENT));
+      return res.json(prepareUserResponse(user));
     }
 
     // Try admin login (use helper)
-    user = await findOne("admins", { username: username });
+    user = await findOne(collectionEnum.ADMINS, { username: username });
     if (user) {
       const valid = await bcrypt.compare(password, user.hashedPassword || "");
       if (!valid) return res.status(401).json({ error: "Invalid password" });
-      user.id = user.adminId || (user._id && user._id.toString());
-      return res.json(prepareUserResponse(user, roleEnum.ADMIN));
+      return res.json(prepareUserResponse(user));
     }
 
     // If no valid user found
@@ -74,10 +74,11 @@ router.post("/register-student", async (req, res) => {
     }
 
     // Check if username/email exists (use helpers)
-    if (await exists("students", { username })) {
+    if (await exists(collectionEnum.STUDENTS, { username })) {
       return res.status(400).json({ error: "Username already exists" });
     }
-    if (await exists("students", { email })) {
+
+    if (await exists(collectionEnum.STUDENTS, { email })) {
       return res.status(400).json({ error: "Email already exists" });
     }
 
@@ -85,11 +86,11 @@ router.post("/register-student", async (req, res) => {
     const hashed = await hashPassword(password);
 
     // Generate student id based on DB count
-    const studentId = await generateStudentIdDb();
+    const userId = await generateStudentIdDb();
 
     // Create new student document
     const newStudent = {
-      studentId, // use studentId field to avoid collision with Mongo _id
+      userId, // use studentId field to avoid collision with Mongo _id
       firstName,
       lastName,
       email,
@@ -97,20 +98,20 @@ router.post("/register-student", async (req, res) => {
       birthday,
       program,
       username,
-      role: "student",
-      department: "",
+      role: roleEnum.STUDENT,
+      department: "SD",
       hashedPassword: hashed,
       registeredCourses: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     // Insert student into MongoDB using helper
-    await createDocument("students", newStudent);
+    await createDocument(collectionEnum.STUDENTS, newStudent);
 
     res.status(201).json({
       message: "Student registered successfully",
-      studentId: newStudent.studentId,
+      studentId: newStudent.userId,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -123,26 +124,27 @@ router.post("/register-admin", async (req, res) => {
   const { username, password } = req.body;
   try {
     // Check if username exists (use helper)
-    if (await exists("admins", { username })) {
+    if (await exists(collectionEnum.ADMINS, { username })) {
       return res.status(400).json({ error: "Username already exists" });
     }
+
     // Hash the password before storing
     const hashed = await hashPassword(password);
 
     // Generate admin id
-    const adminId = await generateAdminIdDb();
+    const userId = await generateAdminIdDb();
 
     // Create new admin document
     const newAdmin = {
-      adminId,
+      userId,
       username,
-      role: "admin",
+      role: roleEnum.ADMIN,
       hashedPassword: hashed,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     // Insert admin into MongoDB using helper
-    await createDocument("admins", newAdmin);
+    await createDocument(collectionEnum.ADMINS, newAdmin);
 
     res.status(201).json({
       message: "Admin registered successfully",
@@ -153,6 +155,5 @@ router.post("/register-admin", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 module.exports = router;

@@ -19,10 +19,6 @@ dotenv.config();
 const mongoURI = process.env.MONGODB_URI;
 const client = new MongoClient(mongoURI);
 
-
-// Export client for use in other modules
-module.exports = { client };
-
 async function connectToMongoDB() {
   try {
     await client.connect();
@@ -88,4 +84,5 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 
-
+// Export client for use in other modules
+module.exports = { client };

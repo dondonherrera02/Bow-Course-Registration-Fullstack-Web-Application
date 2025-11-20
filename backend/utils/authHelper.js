@@ -6,24 +6,18 @@
  */
 
 const bcrypt = require("bcrypt");
-const { readJSON } = require("./fileOperations");
-const { roleEnum } = require("./enum");
+const { roleEnum, collectionEnum } = require("./enum");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "bowcourse-secret-key-2025";
 const { getDatabase } = require("./mongoService");
+
 // Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
     {
-      id: user.id,
+      userId: user.userId,
       username: user.username,
       role: user.role,
-      studentId: user.studentId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      birthday: user.birthday
     },
     JWT_SECRET,
     { expiresIn: "24h" }
@@ -58,22 +52,24 @@ const verifyAdmin = (req, res, next) => {
 // Generate student ID
 async function generateStudentIdDb() {
   const db = await getDatabase();
-  const c = db.collection("students");
+  const c = db.collection(collectionEnum.STUDENTS);
   const year = new Date().getFullYear();
   const count = await c.countDocuments();
   return `STUD${year}${String(count + 1).padStart(3, "0")}`;
 }
+
 // Generate admin ID
 async function generateAdminIdDb() {
   const db = await getDatabase();
-  const c = db.collection("admins");
+  const c = db.collection(collectionEnum.ADMINS);
 
   // Get the highest existing adminId number, then +1
   const cursor = c.find({}, { projection: { adminId: 1 } });
   let max = 0;
 
-  await cursor.forEach(doc => {
-    const id = doc && (doc.adminId || doc.id || doc._id && doc._id.toString());
+  await cursor.forEach((doc) => {
+    const id =
+      doc && (doc.adminId || doc.id || (doc._id && doc._id.toString()));
     if (!id) return;
     const m = id.toString().match(/(\d+)$/);
     if (m) {
@@ -84,6 +80,7 @@ async function generateAdminIdDb() {
   const next = max + 1;
   return `ADMIN${String(next).padStart(3, "0")}`;
 }
+
 const hashPassword = async (password) => {
   const saltRounds = 10;
   return await bcrypt.hash(password, saltRounds);

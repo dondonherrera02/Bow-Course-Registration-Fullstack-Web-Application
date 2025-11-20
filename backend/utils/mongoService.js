@@ -63,11 +63,6 @@ async function updateOne(collectionName, filter, update, options = {}) {
   }
 }
 
-
-
-
-
-
 // TODO: Create additional functions such as updateOne, deleteOne, etc.
 
 module.exports = {

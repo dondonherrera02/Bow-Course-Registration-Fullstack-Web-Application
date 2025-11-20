@@ -6,24 +6,19 @@
  */
 const express = require("express");
 const bcrypt = require("bcrypt");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const { verifyToken, hashPassword } = require("../utils/authHelper");
 const router = express.Router();
 
-const { ObjectId } = require("mongodb");
-const { findOne, createDocument, exists, updateOne } = require("../utils/mongoService");
-const { findStudentByReqStudentId } = require("../utils/studentHelper");
-
-
+const { findOne, createDocument, updateOne, exists } = require("../utils/mongoService");
 
 // Get student profile
 router.get("/profile", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
   try {
-    // prefer req.user.studentId if present, otherwise req.user.id
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const { hashedPassword, ...profile } = student;
@@ -36,7 +31,7 @@ router.get("/profile", verifyToken, async (req, res) => {
 
 // Edit student profile
 router.put("/profile", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
@@ -46,21 +41,21 @@ router.put("/profile", verifyToken, async (req, res) => {
     email,
     phone,
     birthday,
-    role,
     department,
     program,
     currentPassword,
     newPassword,
-    studentId,
   } = req.body;
 
   if (!firstName && !lastName && !email && !phone && !newPassword) {
-    return res.status(400).json({ error: "At least one field must be provided to update" });
+    return res
+      .status(400)
+      .json({ error: "At least one field must be provided to update" });
   }
 
   try {
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     // Handle password change
@@ -68,8 +63,12 @@ router.put("/profile", verifyToken, async (req, res) => {
       if (!currentPassword) {
         return res.status(400).json({ error: "Current password is required to change password" });
       }
+
       const valid = await bcrypt.compare(currentPassword, student.hashedPassword || "");
-      if (!valid) return res.status(401).json({ error: "Current password is incorrect" });
+
+      if (!valid)
+        return res.status(401).json({ error: "Current password is incorrect" });
+
       if (newPassword.length < 8) {
         return res.status(400).json({ error: "New password must be at least 8 characters long" });
       }
@@ -78,8 +77,10 @@ router.put("/profile", verifyToken, async (req, res) => {
 
     // Check email uniqueness
     if (email && email !== student.email) {
-      const emailExists = await findOne("students", { email, _id: { $ne: student._id } });
-      if (emailExists) return res.status(400).json({ error: "Email is already taken" });
+      const emailExists = await exists(collectionEnum.STUDENTS, { email, userId: { $ne: req.user.userId } });
+
+      if (emailExists)
+        return res.status(400).json({ error: "Email is already taken" });
     }
 
     // Apply updates
@@ -89,18 +90,33 @@ router.put("/profile", verifyToken, async (req, res) => {
     if (email) updateFields.email = email;
     if (phone) updateFields.phone = phone;
     if (birthday) updateFields.birthday = birthday;
-    if (role) updateFields.role = role;
     if (department) updateFields.department = department;
     if (program) updateFields.program = program;
     if (student.hashedPassword && newPassword) updateFields.hashedPassword = student.hashedPassword;
-    if (studentId) updateFields.studentId = studentId;
-    updateFields.updatedAt = new Date();
 
-    await updateOne("students", { _id: student._id }, { $set: updateFields });
+    updateFields.updatedAt = new Date().toISOString();
 
-    const updated = await findOne("students", { _id: student._id });
-    const { hashedPassword: hp, ...clean } = updated;
-    res.json({ message: "Profile updated successfully", profile: clean });
+    await updateOne(collectionEnum.STUDENTS, { userId: student.userId }, { $set: updateFields });
+
+    const updatedStudent = await findOne(collectionEnum.STUDENTS, { userId: student.userId });
+    const safeProfile = {
+      userId: updatedStudent.userId,
+      firstName: updatedStudent.firstName,
+      lastName: updatedStudent.lastName,
+      email: updatedStudent.email,
+      phone: updatedStudent.phone,
+      birthday: updatedStudent.birthday,
+      department: updatedStudent.department,
+      program: updatedStudent.program,
+      createdAt: updatedStudent.createdAt,
+      updatedAt: updatedStudent.updatedAt,
+    };
+
+    return res.json({
+      message: "Profile updated successfully",
+      profile: safeProfile,
+    });
+
   } catch (err) {
     console.error("Update profile error:", err);
     res.status(500).json({ error: "Server error" });
@@ -114,51 +130,60 @@ router.post("/register-course", verifyToken, async (req, res) => {
   }
 
   const { courseCode, term } = req.body;
+
   if (!courseCode || !term) {
     return res.status(400).json({ error: "Course code and term are required" });
   }
 
   try {
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
     if (!student) return res.status(404).json({ error: "Student not found" });
 
-    const course = await findOne("courses", { code: courseCode });
+    const course = await findOne(collectionEnum.COURSES, { code: courseCode });
     if (!course) return res.status(404).json({ error: "Course not found" });
 
     if ((course.enrolled || 0) >= (course.capacity || 0)) {
       return res.status(400).json({ error: "Course is full. No more seats available." });
     }
 
-    const existing = (student.registeredCourses || []).find(reg => reg.courseCode === courseCode && reg.term === term);
-    if (existing) return res.status(400).json({ error: "Already registered for this course in the selected term" });
+    const existing = (student.registeredCourses || []).find((reg) => reg.courseCode === courseCode && reg.term === term);
+    if (existing)
+      return res.status(400).json({ error: "Already registered for this course in the selected term" });
 
-    const coursesInTerm = (student.registeredCourses || []).filter(reg => reg.term === term).length;
-    if (coursesInTerm >= 5) return res.status(400).json({ error: "Maximum 5 courses allowed per term" });
+    const coursesInTerm = (student.registeredCourses || []).filter((reg) => reg.term === term).length;
+    if (coursesInTerm >= 5)
+      return res.status(400).json({ error: "Maximum 5 courses allowed per term" });
 
-    const registration = {
+
+    // Add course registration
+    student.registeredCourses.push({
       courseCode,
       courseName: course.name,
       term,
       registrationDate: new Date().toISOString(),
-    };
+    });
 
-    // update student and course (not using transaction) using helpers
-    await updateOne("students", { _id: student._id }, { $push: { registeredCourses: registration }, $set: { updatedAt: new Date() } });
+    // update student
+    student.updatedAt = new Date().toISOString();
+    await updateOne(collectionEnum.STUDENTS, { userId: student.userId }, { $set: student });
 
-    await updateOne("courses", { _id: course._id }, { $inc: { enrolled: 1 }, $set: { updatedAt: new Date() } });
+    // update course
+    course.enrolled += 1;
+    course.updatedAt = new Date().toISOString();
+    await updateOne(collectionEnum.COURSES, { code: courseCode }, { $set: course });
 
-    const updatedCourse = await findOne("courses", { _id: course._id });
+    const updatedCourse = await findOne(collectionEnum.COURSES, { code: courseCode });
 
     res.json({
       message: "Course registered successfully",
       registration: {
         courseCode,
-        courseName: registration.courseName,
+        courseName: updatedCourse.name,
         term,
         enrolled: updatedCourse.enrolled,
         capacity: updatedCourse.capacity,
-        remainingSlots: (updatedCourse.capacity || 0) - (updatedCourse.enrolled || 0),
+        remainingSlots:
+          (updatedCourse.capacity || 0) - (updatedCourse.enrolled || 0),
       },
     });
   } catch (err) {
@@ -169,54 +194,90 @@ router.post("/register-course", verifyToken, async (req, res) => {
 
 // Unregister from a course
 router.put("/unregister-course", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
   const { courseCode, term } = req.body;
-  if (!courseCode || !term) return res.status(400).json({ error: "Course code and term are required" });
+
+  if (!courseCode || !term) {
+    return res.status(400).json({ error: "Course code and term are required" });
+  }
 
   try {
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
-    if (!student) return res.status(404).json({ error: "Student not found" });
-
-    const registrationIndex = (student.registeredCourses || []).findIndex(reg => reg.courseCode === courseCode && reg.term === term);
-    if (registrationIndex === -1) return res.status(400).json({ error: "Not registered for this course in the selected term" });
-
-    const coursesInTerm = (student.registeredCourses || []).filter(reg => reg.term === term).length;
-    if (coursesInTerm <= 2) return res.status(400).json({ error: "Minimum 2 courses required per term" });
-
-    // remove registration
-    await updateOne("students", { _id: student._id }, { $pull: { registeredCourses: { courseCode, term } }, $set: { updatedAt: new Date() } });
-
-    const course = await findOne("courses", { code: courseCode });
-    if (course) {
-      const newEnrolled = Math.max((course.enrolled || 0) - 1, 0);
-      await updateOne("courses", { _id: course._id }, { $set: { enrolled: newEnrolled, updatedAt: new Date() } });
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
     }
 
-    res.json({ message: "Course unregistered successfully" });
+    const registrationIndex = (student.registeredCourses || []).findIndex(
+      (reg) => reg.courseCode === courseCode && reg.term === term
+    );
+
+    if (registrationIndex === -1) {
+      return res.status(400).json({ error: "Not registered for this course in the selected term" });
+    }
+
+    const coursesInTerm = student.registeredCourses.filter((reg) => reg.term === term).length;
+    if (coursesInTerm <= 2) {
+      return res.status(400).json({ error: "Minimum 2 courses required per term" });
+    }
+
+    // Remove the registration
+    student.registeredCourses.splice(registrationIndex, 1);
+    student.updatedAt = new Date();
+
+    await updateOne(
+      collectionEnum.STUDENTS,
+      { userId: student.userId },
+      { $set: student }
+    );
+
+    // Update course enrollment count
+    const course = await findOne(collectionEnum.COURSES, { code: courseCode });
+    if (course) {
+      const updatedEnrolled = Math.max((course.enrolled || 0) - 1, 0);
+
+      await updateOne(
+        collectionEnum.COURSES,
+        { code: courseCode },
+        {
+          $set: {
+            enrolled: updatedEnrolled,
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+
+    return res.json({ message: "Course unregistered successfully" });
+
   } catch (err) {
     console.error("Unregister course error:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
+
 // Get student's registered courses
 router.get("/registered-courses", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
+
   try {
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const { term } = req.query;
+
     let registeredCourses = student.registeredCourses || [];
-    if (term) registeredCourses = registeredCourses.filter(reg => reg.term === term);
+
+    if (term) registeredCourses = registeredCourses.filter((reg) => reg.term === term);
+
     res.json(registeredCourses);
+
   } catch (err) {
     console.error("Get registered courses error:", err);
     res.status(500).json({ error: "Server error" });
@@ -225,7 +286,7 @@ router.get("/registered-courses", verifyToken, async (req, res) => {
 
 // Submit contact form
 router.post("/contact", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
@@ -233,23 +294,24 @@ router.post("/contact", verifyToken, async (req, res) => {
   if (!message) return res.status(400).json({ error: "Message is required" });
 
   try {
-    const lookupId = req.user.studentId || req.user.id;
-    const student = await findStudentByReqStudentId(lookupId);
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const newContactForm = {
-      studentId: student.studentId || student._id.toString(),
+      userId: student.userId,
       name: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
       email: student.email || "",
       message,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
 
-    const result = await createDocument("contactForms", newContactForm);
-    // createDocument returns the insert result object from insertOne
-    newContactForm.id = result.insertedId ? result.insertedId.toString() : undefined;
+    await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
 
-    res.status(201).json({ message: "Contact form submitted successfully", contactForm: newContactForm });
+    res.status(201).json({
+      message: "Contact form submitted successfully",
+      contactForm: newContactForm,
+    });
   } catch (err) {
     console.error("Contact submit error:", err);
     res.status(500).json({ error: "Server error" });

@@ -14,6 +14,14 @@ const roleEnum = Object.freeze({
   },
 });
 
+const collectionEnum = Object.freeze({
+  STUDENTS: "students",
+  ADMINS: "admins",
+  COURSES: "courses",
+  CONTACTFORMS: "contact-forms"
+});
+
 module.exports = {
   roleEnum,
+  collectionEnum,
 };
