@@ -63,6 +63,36 @@ async function updateOne(collectionName, filter, update, options = {}) {
   }
 }
 
+async function findMany(collectionName, query = {}, options = {}) {
+  try {
+    const db = getDatabase();
+    const collection = db.collection(collectionName);
+    const cursor = collection.find(query, options);
+    const results = await cursor.toArray();
+    return results;
+  } catch (error) {
+    console.error(`Error finding documents in ${collectionName}:`, error);
+    throw error;
+  }
+}
+
+async function deleteOne(collectionName, filter) {
+  try {
+    const db = getDatabase();
+    const collection = db.collection(collectionName);
+    const result = await collection.deleteOne(filter);
+    return result;
+  } catch (error) {
+    console.error(`Error deleting document in ${collectionName}:`, error);
+    throw error;
+  }
+}
+
+
+
+
+
+
 // TODO: Create additional functions such as updateOne, deleteOne, etc.
 
 module.exports = {
@@ -71,4 +101,6 @@ module.exports = {
   findOne,
   exists,
   updateOne,
+  findMany,
+  deleteOne,
 };
