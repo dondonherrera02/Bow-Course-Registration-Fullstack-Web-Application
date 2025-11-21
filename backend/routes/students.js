@@ -299,20 +299,15 @@ router.post("/contact", verifyToken, async (req, res) => {
     if (!student) return res.status(404).json({ error: "Student not found" });
 
     const newContactForm = {
+      contactId: Date.now().toString(),
       userId: student.userId,
-      studentId: student.userId,
       name: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
       email: student.email || "",
       message,
       timestamp: new Date().toISOString(),
     };
 
-    const result = await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
-
-    if (result && result.insertedId) {
-      newContactForm.id = result.insertedId.toString();
-      newContactForm._id = result.insertedId;
-    }
+    await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
 
     res.status(201).json({
       message: "Contact form submitted successfully",
