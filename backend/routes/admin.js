@@ -9,13 +9,12 @@ const express = require("express");
 const { verifyToken } = require("../utils/authHelper");
 const { roleEnum, collectionEnum } = require("../utils/enum");
 const { findMany, findOne, deleteOne } = require("../utils/mongoService");
-const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
 // Get all students (Admin only)
 router.get("/students", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
@@ -42,23 +41,14 @@ router.get("/students", verifyToken, async (req, res) => {
 });
 
 // Get student by ID (Admin)
-router.get("/students/:userId", verifyToken, async (req, res) => {
+router.get("/students/:id", verifyToken, async (req, res) => {
   if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
-    const userId = req.params.userId;
-    let student = null;
+    const userId = req.params.id;
 
-    // If it's a valid ObjectId, try lookup by _id first
-    if (ObjectId.isValid(userId)) {
-      student = await findOne(collectionEnum.STUDENTS, { _id: new ObjectId(userId) });
-    }
-
-    // Fallback: lookup by studentId field
-    if (!student) {
-      student = await findOne(collectionEnum.STUDENTS, { userId });
-    }
+    let student = await findOne(collectionEnum.STUDENTS, { userId });
 
     if (!student) return res.status(404).json({ error: "Student not found" });
     const { hashedPassword, password, ...studentDetails } = student;
@@ -71,7 +61,7 @@ router.get("/students/:userId", verifyToken, async (req, res) => {
 
 // Get all contact forms (Admin only)
 router.get("/contact-forms", verifyToken, async (req, res) => {
-  if (req.user.role !== collectionEnum.ADMIN) {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
@@ -88,21 +78,18 @@ router.get("/contact-forms", verifyToken, async (req, res) => {
 
 // Delete contact form (Admin only)
 router.delete("/contact-forms/:id", verifyToken, async (req, res) => {
-  if (req.user.role !== collectionEnum.ADMIN) {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
-    const id = req.params.id;
-    let result;
-    if (ObjectId.isValid(id)) {
-      result = await deleteOne(collectionEnum.CONTACTFORMS, { _id: new ObjectId(id) });
-    }
-    if (!result || result.deletedCount === 0) {
-      result = await deleteOne(collectionEnum.CONTACTFORMS, { studentId: id });
-    }
+    const contactId = req.params.id;
+
+    let result = await deleteOne(collectionEnum.CONTACTFORMS, { contactId });
+
     if (!result || result.deletedCount === 0) {
       return res.status(404).json({ error: "Contact form not found" });
     }
+
     res.json({ message: "Contact form deleted successfully" });
   } catch (err) {
     console.error("Delete contact form (admin) error:", err);
@@ -112,7 +99,7 @@ router.delete("/contact-forms/:id", verifyToken, async (req, res) => {
 
 // Get students grouped by program (Admin only)
 router.get("/students-by-program", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
@@ -133,7 +120,7 @@ router.get("/students-by-program", verifyToken, async (req, res) => {
 
 // Get all course registrations (Admin only)
 router.get("/course-registrations", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
@@ -146,7 +133,7 @@ router.get("/course-registrations", verifyToken, async (req, res) => {
         .forEach((course) => {
           registrations.push({
             // prefer studentId field but fall back to userId/_id for safety
-            studentId: student.studentId || student.userId || (student._id && student._id.toString()),
+            userId: student.userId,
             studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
             studentEmail: student.email || "",
             program: student.program,

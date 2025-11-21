@@ -121,7 +121,7 @@ router.post("/register-student", async (req, res) => {
 
 //Register new admin
 router.post("/register-admin", async (req, res) => {
-  const { username, password } = req.body;
+  const { name, email, username, password } = req.body;
   try {
     // Check if username exists (use helper)
     if (await exists(collectionEnum.ADMINS, { username })) {
@@ -138,6 +138,8 @@ router.post("/register-admin", async (req, res) => {
     const newAdmin = {
       userId,
       username,
+      name,
+      email,
       role: roleEnum.ADMIN,
       hashedPassword: hashed,
       createdAt: new Date().toISOString(),

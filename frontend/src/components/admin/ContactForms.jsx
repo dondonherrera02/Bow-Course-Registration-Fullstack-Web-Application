@@ -82,7 +82,7 @@ const AdminContactForms = () => {
             <tbody>
               {filteredForms.map((form) => (
                 <tr key={form.id}>
-                  <td>{form.studentId}</td>
+                  <td>{form.userId}</td>
                   <td>{form.name}</td>
                   <td>{form.email}</td>
                   <td>{new Date(form.timestamp).toLocaleDateString()}</td>
@@ -116,7 +116,7 @@ const AdminContactForms = () => {
                 <div className="form-details">
                   <div className="detail-item">
                     <label>Student ID:</label>
-                    <p>{selectedForm.studentId}</p>
+                    <p>{selectedForm.userId}</p>
                   </div>
                   <div className="detail-item">
                     <label>Name:</label>

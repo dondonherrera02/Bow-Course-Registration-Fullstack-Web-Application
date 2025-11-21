@@ -143,7 +143,7 @@ const StudentProfile = () => {
             <h2>
               {studentData?.firstName} {studentData?.lastName}
             </h2>
-            <p className="student-id">Student ID: {studentData?.id}</p>
+            <p className="student-id">Student ID: {studentData?.userId}</p>
           </div>
         </div>
 
@@ -296,7 +296,7 @@ const StudentProfile = () => {
               </div>
               <div className="info-item">
                 <label>Student ID</label>
-                <p>{studentData?.id}</p>
+                <p>{studentData?.userId}</p>
               </div>
             </div>
           </section>
