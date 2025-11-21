@@ -21,6 +21,7 @@ const collectionEnum = Object.freeze({
   COURSES: "courses",
   CONTACTFORMS: "contact-forms",
   PROGRAMS: "programs",
+  CONTACTFORMS: "contact-forms"
 });
 
 module.exports = {

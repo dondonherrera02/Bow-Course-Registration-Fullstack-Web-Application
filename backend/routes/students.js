@@ -300,13 +300,19 @@ router.post("/contact", verifyToken, async (req, res) => {
 
     const newContactForm = {
       userId: student.userId,
+      studentId: student.userId,
       name: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
       email: student.email || "",
       message,
       timestamp: new Date().toISOString(),
     };
 
-    await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
+    const result = await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
+
+    if (result && result.insertedId) {
+      newContactForm.id = result.insertedId.toString();
+      newContactForm._id = result.insertedId;
+    }
 
     res.status(201).json({
       message: "Contact form submitted successfully",

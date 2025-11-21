@@ -6,195 +6,218 @@
  */
 
 const express = require("express");
-const { readJSON, writeJSON } = require("../utils/fileOperations");
 const { verifyToken } = require("../utils/authHelper");
-const { roleEnum } = require("../utils/enum");
+const { roleEnum, collectionEnum } = require("../utils/enum");
+const { findMany, findOne, deleteOne } = require("../utils/mongoService");
+const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
 // Get all students (Admin only)
-router.get("/students", verifyToken, (req, res) => {
+router.get("/students", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const students = readJSON("students.json");
-  const programs = readJSON("programs.json");
+  try {
+    const students = await findMany(collectionEnum.STUDENTS, {});
+    const programs = await findMany(collectionEnum.PROGRAMS, {});
 
-  // Build lookup map for fast access
-  const programMap = {};
-  programs.forEach((prg) => {
-    programMap[prg.code] = prg.name;
-  });
+    const programMap = {};
+    (programs || []).forEach((prg) => {
+      if (prg && prg.code) programMap[prg.code] = prg.name;
+    });
 
-  const studentsWithoutPasswords = students.map(
-    ({ hashedPassword, password, ...student }) => {
-      const programName = programMap[student.program] || null;
-      return { ...student, programName };
-    }
-  );
+    const studentsWithoutPasswords = (students || []).map((student) => {
+      const { hashedPassword, password, ...s } = student || {};
+      const programName = programMap[s.program] || null;
+      return { ...s, programName };
+    });
 
-  res.json(studentsWithoutPasswords);
+    res.json(studentsWithoutPasswords);
+  } catch (err) {
+    console.error("Get students (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Get student by ID (Admin)
-router.get("/students/:id", verifyToken, (req, res) => {
+router.get("/students/:id", verifyToken, async (req, res) => {
   if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
+  try {
+    const id = req.params.id;
+    let student = null;
 
-  const students = readJSON("students.json");
-  const student = students.find((s) => s.id === req.params.id);
+    // If it's a valid ObjectId, try lookup by _id first
+    if (ObjectId.isValid(id)) {
+      student = await findOne(collectionEnum.STUDENTS, { _id: new ObjectId(id) });
+    }
 
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
+    // Fallback: lookup by studentId field
+    if (!student) {
+      student = await findOne(collectionEnum.STUDENTS, { studentId: id });
+    }
+
+    if (!student) return res.status(404).json({ error: "Student not found" });
+    const { hashedPassword, password, ...studentDetails } = student;
+    res.json(studentDetails);
+  } catch (err) {
+    console.error("Get student by id (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  // Remove password from response
-  const { password, ...studentDetails } = student;
-  res.json(studentDetails);
 });
 
 // Get all contact forms (Admin only)
-router.get("/contact-forms", verifyToken, (req, res) => {
+router.get("/contact-forms", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
-
-  const contactForms = readJSON("contactForms.json");
-
-  // Sort by timestamp (newest first)
-  const sortedForms = contactForms.sort(
-    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-  );
-
-  res.json(sortedForms);
+  try {
+    const contactForms = await findMany(collectionEnum.CONTACTFORMS, {});
+    const sortedForms = (contactForms || []).sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+    res.json(sortedForms);
+  } catch (err) {
+    console.error("Get contact forms (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Delete contact form (Admin only)
-router.delete("/contact-forms/:id", verifyToken, (req, res) => {
+router.delete("/contact-forms/:id", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
-
-  const contactForms = readJSON("contactForms.json");
-  const formIndex = contactForms.findIndex((form) => form.id === req.params.id);
-
-  if (formIndex === -1) {
-    return res.status(404).json({ error: "Contact form not found" });
+  try {
+    const id = req.params.id;
+    let result;
+    if (ObjectId.isValid(id)) {
+      result = await deleteOne(collectionEnum.CONTACTFORMS, { _id: new ObjectId(id) });
+    }
+    if (!result || result.deletedCount === 0) {
+      result = await deleteOne(collectionEnum.CONTACTFORMS, { studentId: id });
+    }
+    if (!result || result.deletedCount === 0) {
+      return res.status(404).json({ error: "Contact form not found" });
+    }
+    res.json({ message: "Contact form deleted successfully" });
+  } catch (err) {
+    console.error("Delete contact form (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  contactForms.splice(formIndex, 1);
-  writeJSON("contactForms.json", contactForms);
-
-  res.json({ message: "Contact form deleted successfully" });
 });
 
 // Get students grouped by program (Admin only)
-router.get("/students-by-program", verifyToken, (req, res) => {
+router.get("/students-by-program", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
-
-  const students = readJSON("students.json");
-
-  // Group students by program
-  const studentsByProgram = students.reduce((acc, student) => {
-    const { password, ...studentWithoutPassword } = student;
-
-    if (!acc[student.program]) {
-      acc[student.program] = [];
-    }
-
-    acc[student.program].push(studentWithoutPassword);
-    return acc;
-  }, {});
-
-  res.json(studentsByProgram);
+  try {
+    const students = await findMany(collectionEnum.STUDENTS, {});
+    const studentsByProgram = (students || []).reduce((acc, student) => {
+      const { password, hashedPassword, ...studentWithoutPassword } = student || {};
+      if (!acc[student.program])
+        acc[student.program] = [];
+      acc[student.program].push(studentWithoutPassword);
+      return acc;
+    }, {});
+    res.json(studentsByProgram);
+  } catch (err) {
+    console.error("Get students by program (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Get all course registrations (Admin only)
-router.get("/course-registrations", verifyToken, (req, res) => {
+router.get("/course-registrations", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
-
-  const students = readJSON("students.json");
-  const { courseCode, term } = req.query;
-
-  let registrations = [];
-
-  students.forEach((student) => {
-    student.registeredCourses.forEach((course) => {
-      registrations.push({
-        studentId: student.id,
-        studentName: `${student.firstName} ${student.lastName}`,
-        studentEmail: student.email,
-        program: student.program,
-        courseCode: course.courseCode,
-        courseName: course.courseName,
-        term: course.term,
-        registrationDate: course.registrationDate,
-      });
+  try {
+    const students = await findMany(collectionEnum.STUDENTS, {});
+    const { courseCode, term } = req.query;
+    let registrations = [];
+    (students || []).forEach((student) => {
+      (student.registeredCourses || [])
+        .filter((course) => course && course.courseCode) // skip invalid/empty entries
+        .forEach((course) => {
+          registrations.push({
+            // prefer studentId field but fall back to userId/_id for safety
+            studentId: student.studentId || student.userId || (student._id && student._id.toString()),
+            studentName: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+            studentEmail: student.email || "",
+            program: student.program,
+            courseCode: course.courseCode,
+            courseName: course.courseName,
+            term: course.term,
+            registrationDate: course.registrationDate,
+          });
+        });
     });
-  });
 
-  // Apply filters
-  if (courseCode) {
-    registrations = registrations.filter((reg) =>
-      reg.courseCode.toLowerCase().includes(courseCode.toLowerCase())
-    );
+    if (courseCode) {
+      registrations = registrations.filter((reg) =>
+        reg.courseCode && reg.courseCode.toLowerCase().includes(courseCode.toLowerCase())
+      );
+    }
+
+    if (term) {
+      registrations = registrations.filter((reg) => reg.term === term);
+    }
+
+    res.json(registrations);
+  } catch (err) {
+    console.error("Get course registrations (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  if (term) {
-    registrations = registrations.filter((reg) => reg.term === term);
-  }
-
-  res.json(registrations);
 });
 
 // Get dashboard statistics (Admin only)
-router.get("/dashboard-stats", verifyToken, (req, res) => {
+router.get("/dashboard-stats", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
+  try {
+    const students = await findMany(collectionEnum.STUDENTS, {});
+    const courses = await findMany(collectionEnum.COURSES, {});
+    const programs = await findMany(collectionEnum.PROGRAMS, {});
+    const contactForms = await findMany(collectionEnum.CONTACTFORMS, {});
 
-  const students = readJSON("students.json");
-  const courses = readJSON("courses.json");
-  const programs = readJSON("programs.json");
-  const contactForms = readJSON("contactForms.json");
+    const totalRegistrations = (students || []).reduce(
+      (total, student) => total + ((student.registeredCourses || []).length),
+      0
+    );
 
-  // Calculate total registrations
-  const totalRegistrations = students.reduce(
-    (total, student) => total + student.registeredCourses.length,
-    0
-  );
+    const studentsByProgram = (students || []).reduce((acc, student) => {
+      acc[student.program] = (acc[student.program] || 0) + 1;
+      return acc;
+    }, {});
 
-  // Calculate students by program
-  const studentsByProgram = students.reduce((acc, student) => {
-    acc[student.program] = (acc[student.program] || 0) + 1;
-    return acc;
-  }, {});
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Calculate recent contact forms (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentContactForms = (contactForms || []).filter(
+      (form) => new Date(form.timestamp) > thirtyDaysAgo
+    ).length;
 
-  const recentContactForms = contactForms.filter(
-    (form) => new Date(form.timestamp) > thirtyDaysAgo
-  ).length;
+    const stats = {
+      totalStudents: (students || []).length,
+      totalCourses: (courses || []).length,
+      totalPrograms: (programs || []).length,
+      totalRegistrations,
+      totalContactForms: (contactForms || []).length,
+      recentContactForms,
+      studentsByProgram,
+    };
 
-  const stats = {
-    totalStudents: students.length,
-    totalCourses: courses.length,
-    totalPrograms: programs.length,
-    totalRegistrations,
-    totalContactForms: contactForms.length,
-    recentContactForms,
-    studentsByProgram,
-  };
-
-  res.json(stats);
+    res.json(stats);
+  } catch (err) {
+    console.error("Get dashboard stats (admin) error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;
