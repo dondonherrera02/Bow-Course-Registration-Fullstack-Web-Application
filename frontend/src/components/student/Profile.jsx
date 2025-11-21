@@ -45,6 +45,17 @@ const StudentProfile = () => {
       // Save the fetched data to state.
       setStudentData(data);
 
+      // Update localStorage with the latest user data in the required format
+      const userData = {
+        id: data.userId,
+        role: "student",
+        email: data.email,
+        name: `${data.firstName} ${data.lastName}`,
+        department: data.department,
+        program: data.program
+      };
+      localStorage.setItem("user", JSON.stringify(userData));
+
       // Initialize form fields with the current profile info.
       setFormData({
         firstName: data.firstName,
@@ -81,17 +92,30 @@ const StudentProfile = () => {
       // Create a copy of the current form data.
       const updateData = { ...formData };
 
-      // Remove password fields if they’re not being updated.
+      // Remove password fields if they're not being updated.
       if (!updateData.password) {
         delete updateData.password;
       }
 
       // Send the updated profile to the backend.
-      await apiHelper.put(
+      const response = await apiHelper.put(
         `${BOW_COURSE_APP_API_URL}/students/profile`,
         updateData,
         token
       );
+
+      // Update localStorage with the updated user data in the required format
+      if (response && response.user) {
+        const userData = {
+          id: response.user.userId,
+          role: "student",
+          email: response.user.email,
+          name: `${response.user.firstName} ${response.user.lastName}`,
+          department: response.user.department,
+          program: response.user.program
+        };
+        localStorage.setItem("user", JSON.stringify(userData));
+      }
 
       toast.success("Profile updated successfully!");
 
