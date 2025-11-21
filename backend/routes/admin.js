@@ -42,22 +42,22 @@ router.get("/students", verifyToken, async (req, res) => {
 });
 
 // Get student by ID (Admin)
-router.get("/students/:id", verifyToken, async (req, res) => {
+router.get("/students/:userId", verifyToken, async (req, res) => {
   if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
-    const id = req.params.id;
+    const userId = req.params.userId;
     let student = null;
 
     // If it's a valid ObjectId, try lookup by _id first
-    if (ObjectId.isValid(id)) {
-      student = await findOne(collectionEnum.STUDENTS, { _id: new ObjectId(id) });
+    if (ObjectId.isValid(userId)) {
+      student = await findOne(collectionEnum.STUDENTS, { _id: new ObjectId(userId) });
     }
 
     // Fallback: lookup by studentId field
     if (!student) {
-      student = await findOne(collectionEnum.STUDENTS, { studentId: id });
+      student = await findOne(collectionEnum.STUDENTS, { userId });
     }
 
     if (!student) return res.status(404).json({ error: "Student not found" });
@@ -71,7 +71,7 @@ router.get("/students/:id", verifyToken, async (req, res) => {
 
 // Get all contact forms (Admin only)
 router.get("/contact-forms", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== collectionEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
@@ -88,7 +88,7 @@ router.get("/contact-forms", verifyToken, async (req, res) => {
 
 // Delete contact form (Admin only)
 router.delete("/contact-forms/:id", verifyToken, async (req, res) => {
-  if (req.user.role !== "admin") {
+  if (req.user.role !== collectionEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
   try {
