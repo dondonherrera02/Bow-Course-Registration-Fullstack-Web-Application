@@ -195,6 +195,9 @@ router.delete("/:code", verifyToken, async (req, res) => {
 
   const existing = await findOne(collectionEnum.COURSES, { code: req.params.code });
   if (!existing) return res.status(404).json({ error: "Course not found" });
+  if (existing.enrolled > 0) 
+    return res.status(400).json({ error: "Cannot delete course with active enrollments" });
+  
 
   await deleteOne(collectionEnum.COURSES, { code: req.params.code });
   res.json({ message: "Course deleted successfully" });
