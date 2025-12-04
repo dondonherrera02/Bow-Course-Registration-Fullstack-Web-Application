@@ -14,7 +14,7 @@ const Signup = () => {
     email: "",
     phone: "",
     birthday: "",
-    program: "SDD",
+    program: "",
     username: "",
     password: "",
     confirmPassword: "",
