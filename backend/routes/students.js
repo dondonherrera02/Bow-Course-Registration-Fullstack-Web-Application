@@ -4,35 +4,34 @@
  * @class: SODV2201
  * @author: Dondon Herrera, Victor Leung, Salman Aravai, Mark Castro, Nicole Ricare
  */
-
 const express = require("express");
 const bcrypt = require("bcrypt");
-const { readJSON, writeJSON } = require("../utils/fileOperations");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const { verifyToken, hashPassword } = require("../utils/authHelper");
-
 const router = express.Router();
 
+const { findOne, createDocument, updateOne, exists } = require("../utils/mongoService");
+
 // Get student profile
-router.get("/profile", verifyToken, (req, res) => {
-  if (req.user.role !== "student") {
+router.get("/profile", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+    if (!student) return res.status(404).json({ error: "Student not found" });
 
-  const students = readJSON("students.json");
-  const student = students.find((s) => s.id === req.user.id);
-
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
+    const { hashedPassword, ...profile } = student;
+    res.json(profile);
+  } catch (err) {
+    console.error("Get profile error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  // Remove password from response
-  const { password, ...studentProfile } = student;
-  res.json(studentProfile);
 });
 
 // Edit student profile
 router.put("/profile", verifyToken, async (req, res) => {
-  if (req.user.role !== "student") {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
@@ -48,78 +47,84 @@ router.put("/profile", verifyToken, async (req, res) => {
     newPassword,
   } = req.body;
 
-  // Validate at least one field is provided
   if (!firstName && !lastName && !email && !phone && !newPassword) {
     return res
       .status(400)
       .json({ error: "At least one field must be provided to update" });
   }
 
-  const students = readJSON("students.json");
-  const studentIndex = students.findIndex((s) => s.id === req.user.id);
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
 
-  if (studentIndex === -1) {
-    return res.status(404).json({ error: "Student not found" });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    // Handle password change
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: "Current password is required to change password" });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, student.hashedPassword || "");
+
+      if (!valid)
+        return res.status(401).json({ error: "Current password is incorrect" });
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters long" });
+      }
+      student.hashedPassword = await hashPassword(newPassword);
+    }
+
+    // Check email uniqueness
+    if (email && email !== student.email) {
+      const emailExists = await exists(collectionEnum.STUDENTS, { email, userId: { $ne: req.user.userId } });
+
+      if (emailExists)
+        return res.status(400).json({ error: "Email is already taken" });
+    }
+
+    // Apply updates
+    const updateFields = {};
+    if (firstName) updateFields.firstName = firstName;
+    if (lastName) updateFields.lastName = lastName;
+    if (email) updateFields.email = email;
+    if (phone) updateFields.phone = phone;
+    if (birthday) updateFields.birthday = birthday;
+    if (department) updateFields.department = department;
+    if (program) updateFields.program = program;
+    if (student.hashedPassword && newPassword) updateFields.hashedPassword = student.hashedPassword;
+
+    updateFields.updatedAt = new Date().toISOString();
+
+    await updateOne(collectionEnum.STUDENTS, { userId: student.userId }, { $set: updateFields });
+
+    const updatedStudent = await findOne(collectionEnum.STUDENTS, { userId: student.userId });
+    const safeProfile = {
+      userId: updatedStudent.userId,
+      firstName: updatedStudent.firstName,
+      lastName: updatedStudent.lastName,
+      email: updatedStudent.email,
+      phone: updatedStudent.phone,
+      birthday: updatedStudent.birthday,
+      department: updatedStudent.department,
+      program: updatedStudent.program,
+      createdAt: updatedStudent.createdAt,
+      updatedAt: updatedStudent.updatedAt,
+    };
+
+    return res.json({
+      message: "Profile updated successfully",
+      profile: safeProfile,
+    });
+
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  // Handle password change
-  if (newPassword) {
-    // Current password is required to change password
-    if (!currentPassword) {
-      return res.status(400).json({
-        error: "Current password is required to change password",
-      });
-    }
-
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      students[studentIndex].hashedPassword
-    );
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Current password is incorrect" });
-    }
-
-    // Validate new password length
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        error: "New password must be at least 8 characters long",
-      });
-    }
-
-    // Hash and update new password
-    students[studentIndex].hashedPassword = await hashPassword(newPassword);
-  }
-
-  // Check if email is being changed and if it's already taken by another user
-  if (email && email !== students[studentIndex].email) {
-    const emailExists = students.some(
-      (s) => s.email === email && s.id !== req.user.id
-    );
-    if (emailExists) {
-      return res.status(400).json({ error: "Email is already taken" });
-    }
-  }
-
-  // Update only provided fields (excluding password fields)
-  if (firstName) students[studentIndex].firstName = firstName;
-  if (lastName) students[studentIndex].lastName = lastName;
-  if (email) students[studentIndex].email = email;
-  if (phone) students[studentIndex].phone = phone;
-
-  writeJSON("students.json", students);
-
-  // Remove password from response
-  const { hashedPassword, ...updatedProfile } = students[studentIndex];
-  res.json({
-    message: "Profile updated successfully",
-    profile: updatedProfile,
-  });
 });
 
 // Register for a course
-router.post("/register-course", verifyToken, (req, res) => {
+router.post("/register-course", verifyToken, async (req, res) => {
   if (req.user.role !== "student") {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
@@ -130,85 +135,66 @@ router.post("/register-course", verifyToken, (req, res) => {
     return res.status(400).json({ error: "Course code and term are required" });
   }
 
-  const students = readJSON("students.json");
-  const studentIndex = students.findIndex((s) => s.id === req.user.id);
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+    if (!student) return res.status(404).json({ error: "Student not found" });
 
-  if (studentIndex === -1) {
-    return res.status(404).json({ error: "Student not found" });
-  }
+    const course = await findOne(collectionEnum.COURSES, { code: courseCode });
+    if (!course) return res.status(404).json({ error: "Course not found" });
 
-  const courses = readJSON("courses.json");
-  const courseIndex = courses.findIndex((c) => c.code === courseCode);
+    if ((course.enrolled || 0) >= (course.capacity || 0)) {
+      return res.status(400).json({ error: "Course is full. No more seats available." });
+    }
 
-  if (courseIndex === -1) {
-    return res.status(404).json({ error: "Course not found" });
-  }
+    const existing = (student.registeredCourses || []).find((reg) => reg.courseCode === courseCode && reg.term === term);
+    if (existing)
+      return res.status(400).json({ error: "Already registered for this course in the selected term" });
 
-  const course = courses[courseIndex];
-  const student = students[studentIndex];
+    const coursesInTerm = (student.registeredCourses || []).filter((reg) => reg.term === term).length;
+    if (coursesInTerm >= 5)
+      return res.status(400).json({ error: "Maximum 5 courses allowed per term" });
 
-  // Check if course is full
-  if (course.enrolled >= course.capacity) {
-    return res.status(400).json({
-      error: "Course is full. No more seats available.",
-    });
-  }
 
-  // Check if already registered for this course in the same term
-  const existingRegistration = student.registeredCourses.find(
-    (reg) => reg.courseCode === courseCode && reg.term === term
-  );
-
-  if (existingRegistration) {
-    return res.status(400).json({
-      error: "Already registered for this course in the selected term",
-    });
-  }
-
-  // Check course limit (2-5 courses per term)
-  const coursesInTerm = student.registeredCourses.filter(
-    (reg) => reg.term === term
-  ).length;
-
-  if (coursesInTerm >= 5) {
-    return res.status(400).json({
-      error: "Maximum 5 courses allowed per term",
-    });
-  }
-
-  // Add course registration
-  student.registeredCourses.push({
-    courseCode,
-    courseName: course.name,
-    term,
-    registrationDate: new Date().toISOString(),
-  });
-
-  // Increment course enrolled count
-  courses[courseIndex].enrolled += 1;
-
-  // Save both files
-  students[studentIndex] = student;
-  writeJSON("students.json", students);
-  writeJSON("courses.json", courses);
-
-  res.json({
-    message: "Course registered successfully",
-    registration: {
+    // Add course registration
+    student.registeredCourses.push({
       courseCode,
       courseName: course.name,
       term,
-      enrolled: courses[courseIndex].enrolled,
-      capacity: courses[courseIndex].capacity,
-      remainingSlots:
-        courses[courseIndex].capacity - courses[courseIndex].enrolled,
-    },
-  });
+      registrationDate: new Date().toISOString(),
+    });
+
+    // update student
+    student.updatedAt = new Date().toISOString();
+    await updateOne(collectionEnum.STUDENTS, { userId: student.userId }, { $set: student });
+
+    // update course
+    course.enrolled += 1;
+    course.updatedAt = new Date().toISOString();
+    await updateOne(collectionEnum.COURSES, { code: courseCode }, { $set: course });
+
+    const updatedCourse = await findOne(collectionEnum.COURSES, { code: courseCode });
+
+    res.json({
+      message: "Course registered successfully",
+      registration: {
+        courseCode,
+        courseName: updatedCourse.name,
+        term,
+        enrolled: updatedCourse.enrolled,
+        capacity: updatedCourse.capacity,
+        remainingSlots:
+          (updatedCourse.capacity || 0) - (updatedCourse.enrolled || 0),
+      },
+    });
+  } catch (err) {
+    console.error("Register course error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Unregister from a course
-router.put("/unregister-course", verifyToken, (req, res) => {
-  if (req.user.role !== "student") {
+router.put("/unregister-course", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
@@ -218,119 +204,119 @@ router.put("/unregister-course", verifyToken, (req, res) => {
     return res.status(400).json({ error: "Course code and term are required" });
   }
 
-  const students = readJSON("students.json");
-  const studentIndex = students.findIndex((s) => s.id === req.user.id);
-
-  if (studentIndex === -1) {
-    return res.status(404).json({ error: "Student not found" });
-  }
-
-  const student = students[studentIndex];
-
-  // Find and remove the registration
-  const registrationIndex = student.registeredCourses.findIndex(
-    (reg) => reg.courseCode === courseCode && reg.term === term
-  );
-
-  if (registrationIndex === -1) {
-    return res.status(400).json({
-      error: "Not registered for this course in the selected term",
-    });
-  }
-
-  // Check minimum course requirement (at least 2 courses per term)
-  const coursesInTerm = student.registeredCourses.filter(
-    (reg) => reg.term === term
-  ).length;
-
-  if (coursesInTerm <= 2) {
-    return res.status(400).json({
-      error: "Minimum 2 courses required per term",
-    });
-  }
-
-  // Remove the registration
-  student.registeredCourses.splice(registrationIndex, 1);
-
-  // Decrement course enrolled count
-  const courses = readJSON("courses.json");
-  const courseIndex = courses.findIndex((c) => c.code === courseCode);
-
-  if (courseIndex !== -1) {
-    // Ensure enrolled count doesn't go below 0
-    if (courses[courseIndex].enrolled > 0) {
-      courses[courseIndex].enrolled -= 1;
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
     }
-    writeJSON("courses.json", courses);
+
+    const registrationIndex = (student.registeredCourses || []).findIndex(
+      (reg) => reg.courseCode === courseCode && reg.term === term
+    );
+
+    if (registrationIndex === -1) {
+      return res.status(400).json({ error: "Not registered for this course in the selected term" });
+    }
+
+    const coursesInTerm = student.registeredCourses.filter((reg) => reg.term === term).length;
+    if (coursesInTerm <= 2) {
+      return res.status(400).json({ error: "Minimum 2 courses required per term" });
+    }
+
+    // Remove the registration
+    student.registeredCourses.splice(registrationIndex, 1);
+    student.updatedAt = new Date();
+
+    await updateOne(
+      collectionEnum.STUDENTS,
+      { userId: student.userId },
+      { $set: student }
+    );
+
+    // Update course enrollment count
+    const course = await findOne(collectionEnum.COURSES, { code: courseCode });
+    if (course) {
+      const updatedEnrolled = Math.max((course.enrolled || 0) - 1, 0);
+
+      await updateOne(
+        collectionEnum.COURSES,
+        { code: courseCode },
+        {
+          $set: {
+            enrolled: updatedEnrolled,
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+
+    return res.json({ message: "Course unregistered successfully" });
+
+  } catch (err) {
+    console.error("Unregister course error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-
-  // Save student data
-  students[studentIndex] = student;
-  writeJSON("students.json", students);
-
-  res.json({ message: "Course unregistered successfully" });
 });
 
+
 // Get student's registered courses
-router.get("/registered-courses", verifyToken, (req, res) => {
-  if (req.user.role !== "student") {
+router.get("/registered-courses", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
-  const students = readJSON("students.json");
-  const student = students.find((s) => s.id === req.user.id);
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
 
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const { term } = req.query;
+
+    let registeredCourses = student.registeredCourses || [];
+
+    if (term) registeredCourses = registeredCourses.filter((reg) => reg.term === term);
+
+    res.json(registeredCourses);
+
+  } catch (err) {
+    console.error("Get registered courses error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  const { term } = req.query;
-  let registeredCourses = student.registeredCourses;
-
-  if (term) {
-    registeredCourses = registeredCourses.filter((reg) => reg.term === term);
-  }
-
-  res.json(registeredCourses);
 });
 
 // Submit contact form
-router.post("/contact", verifyToken, (req, res) => {
-  if (req.user.role !== "student") {
+router.post("/contact", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.STUDENT) {
     return res.status(403).json({ error: "Access denied. Students only." });
   }
 
   const { message } = req.body;
+  if (!message) return res.status(400).json({ error: "Message is required" });
 
-  if (!message) {
-    return res.status(400).json({ error: "Message is required" });
+  try {
+    const student = await findOne(collectionEnum.STUDENTS, { userId: req.user.userId });
+
+    if (!student) return res.status(404).json({ error: "Student not found" });
+
+    const newContactForm = {
+      contactId: Date.now().toString(),
+      userId: student.userId,
+      name: `${student.firstName || ""} ${student.lastName || ""}`.trim(),
+      email: student.email || "",
+      message,
+      timestamp: new Date().toISOString(),
+    };
+
+    await createDocument(collectionEnum.CONTACTFORMS, newContactForm);
+
+    res.status(201).json({
+      message: "Contact form submitted successfully",
+      contactForm: newContactForm,
+    });
+  } catch (err) {
+    console.error("Contact submit error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  const students = readJSON("students.json");
-  const contactForms = readJSON("contactForms.json");
-
-  const student = students.find((s) => s.id === req.user.id);
-
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
-  }
-
-  const newContactForm = {
-    id: Date.now().toString(),
-    studentId: student.id,
-    name: `${student.firstName} ${student.lastName}`,
-    email: student.email,
-    message,
-    timestamp: new Date().toISOString(),
-  };
-
-  contactForms.push(newContactForm);
-  writeJSON("contactForms.json", contactForms);
-
-  res.status(201).json({
-    message: "Contact form submitted successfully",
-    contactForm: newContactForm,
-  });
 });
 
 module.exports = router;

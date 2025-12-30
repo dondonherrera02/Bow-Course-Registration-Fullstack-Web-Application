@@ -19,7 +19,8 @@ function validateTermDates(term, startDate, endDate) {
     return null;
   }
 
-  const range = TERM_RANGES[term];
+  const normalizedTerm = typeof term === "string" ? term.trim() : term;
+  const range = TERM_RANGES[normalizedTerm];
   if (!range) {
     return null;
   }
@@ -31,8 +32,9 @@ function validateTermDates(term, startDate, endDate) {
     return null;
   }
 
-  const startMonth = start.getMonth();
-  const endMonth = end.getMonth();
+  // Use UTC month to avoid local timezone shifting dates across day/month boundaries
+  const startMonth = start.getUTCMonth();
+  const endMonth = end.getUTCMonth();
 
   // Check if start date falls within term range
   if (startMonth < range.startMonth || startMonth > range.endMonth) {

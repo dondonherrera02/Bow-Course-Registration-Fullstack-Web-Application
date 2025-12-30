@@ -83,8 +83,8 @@ const AdminStudents = () => {
             </thead>
             <tbody>
               {filteredStudents.map((student) => (
-                <tr key={student.id}>
-                  <td>{student.id}</td>
+                <tr key={student.userId}>
+                  <td>{student.userId}</td>
                   <td>
                     {student.firstName} {student.lastName}
                   </td>
@@ -124,7 +124,7 @@ const AdminStudents = () => {
                     <div className="details-grid">
                       <div className="detail-item">
                         <label>Student ID:</label>
-                        <p>{selectedStudent.id}</p>
+                        <p>{selectedStudent.userId}</p>
                       </div>
                       <div className="detail-item">
                         <label>Name:</label>

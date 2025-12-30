@@ -6,48 +6,49 @@
  */
 
 const express = require("express");
-const { readJSON, writeJSON } = require("../utils/fileOperations");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const { verifyToken } = require("../utils/authHelper");
 const { validateCourseFields } = require("../utils/courseHelper");
+const { findMany, findOne, createDocument, exists, updateOne, deleteOne } = require("../utils/mongoService");
 
 const router = express.Router();
 
 // Get all courses (public)
-router.get("/", (req, res) => {
-  const courses = readJSON("courses.json");
-
-  // Add remaining slots calculation to each course
-  const coursesWithSlots = courses.map((course) => ({
-    ...course,
-    remainingSlots: course.capacity - course.enrolled,
-    isFull: course.enrolled >= course.capacity,
-  }));
-
-  res.json(coursesWithSlots);
+router.get("/", async (req, res) => {
+  try {
+    const courses = await findMany(collectionEnum.COURSES, {});
+    const coursesWithSlots = (courses || []).map((course) => ({
+      ...course,
+      remainingSlots: (course.capacity || 0) - (course.enrolled || 0),
+      isFull: (course.enrolled || 0) >= (course.capacity || 0),
+    }));
+    res.json(coursesWithSlots);
+  } catch (err) {
+    console.error("Get courses error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // Get course by code
-router.get("/:code", (req, res) => {
-  const courses = readJSON("courses.json");
-  const course = courses.find((c) => c.code === req.params.code);
-
-  if (!course) {
-    return res.status(404).json({ error: "Course not found" });
+router.get("/:code", async (req, res) => {
+  try {
+    const course = await findOne(collectionEnum.COURSES, { code: req.params.code });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    const courseWithSlots = {
+      ...course,
+      remainingSlots: (course.capacity || 0) - (course.enrolled || 0),
+      isFull: (course.enrolled || 0) >= (course.capacity || 0),
+    };
+    res.json(courseWithSlots);
+  } catch (err) {
+    console.error("Get course error:", err);
+    res.status(500).json({ error: "Server error" });
   }
-
-  // Add remaining slots calculation
-  const courseWithSlots = {
-    ...course,
-    remainingSlots: course.capacity - course.enrolled,
-    isFull: course.enrolled >= course.capacity,
-  };
-
-  res.json(courseWithSlots);
 });
 
 // Create new course (Admin only)
-router.post("/", verifyToken, (req, res) => {
-  if (req.user.role !== "admin") {
+router.post("/", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
@@ -95,17 +96,13 @@ router.post("/", verifyToken, (req, res) => {
     programCode,
   } = req.body;
 
-  const courses = readJSON("courses.json");
-
   // Check if course code already exists
-  if (courses.some((c) => c.code === code)) {
+  if (await exists(collectionEnum.COURSES, { code })) {
     return res.status(400).json({ error: "Course code already exists" });
   }
 
-  const programs = readJSON("programs.json");
-
-  // Check if the request program code exists
-  if (!programs.some((p) => p.code === programCode)) {
+  // Check program exists
+  if (!(await exists(collectionEnum.PROGRAMS, { code: programCode }))) {
     return res.status(400).json({ error: "Program code not registered" });
   }
 
@@ -125,8 +122,7 @@ router.post("/", verifyToken, (req, res) => {
     updatedAt: new Date().toISOString(),
   };
 
-  courses.push(newCourse);
-  writeJSON("courses.json", courses);
+  await createDocument(collectionEnum.COURSES, newCourse);
 
   res.status(201).json({
     message: "Course created successfully",
@@ -135,21 +131,15 @@ router.post("/", verifyToken, (req, res) => {
 });
 
 // Update course (Admin only)
-router.put("/:code", verifyToken, (req, res) => {
-  if (req.user.role !== "admin") {
+router.put("/:code", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const courses = readJSON("courses.json");
-  const courseIndex = courses.findIndex((c) => c.code === req.params.code);
+  const existingCourse = await findOne(collectionEnum.COURSES, { code: req.params.code });
+  if (!existingCourse) return res.status(404).json({ error: "Course not found" });
 
-  if (courseIndex === -1) {
-    return res.status(404).json({ error: "Course not found" });
-  }
-
-  const existingCourse = courses[courseIndex];
-  const { name, term, startDate, endDate, description, capacity, programCode } =
-    req.body;
+  const { name, term, startDate, endDate, description, capacity, programCode } = req.body;
 
   // Build the updated course data for validation
   const updatedData = {
@@ -163,6 +153,7 @@ router.put("/:code", verifyToken, (req, res) => {
     programCode: programCode || existingCourse.programCode,
   };
 
+
   // Validate all fields (using updated values)
   const errors = validateCourseFields(updatedData);
   if (errors) {
@@ -172,53 +163,43 @@ router.put("/:code", verifyToken, (req, res) => {
   // Check chronological order
   const reqStartDate = new Date(updatedData.startDate);
   const reqEndDate = new Date(updatedData.endDate);
-
   if (!isNaN(reqStartDate) && !isNaN(reqEndDate)) {
     if (reqEndDate <= reqStartDate) {
-      return res
-        .status(400)
-        .json({ error: "End Date must be after Start Date" });
+      return res.status(400).json({ error: "End Date must be after Start Date" });
     }
   }
 
-  // Update course
-  courses[courseIndex] = {
-    ...existingCourse,
-    ...(name && { name }),
-    ...(term && { term }),
-    ...(startDate && { startDate }),
-    ...(endDate && { endDate }),
-    ...(description && { description }),
-    ...(capacity !== undefined && { capacity }),
-    ...(programCode && { programCode }),
-    updatedBy: req.user.username,
-    updatedAt: new Date().toISOString(),
-  };
+  const updateFields = {};
+  if (name) updateFields.name = name;
+  if (term) updateFields.term = term;
+  if (startDate) updateFields.startDate = startDate;
+  if (endDate) updateFields.endDate = endDate;
+  if (description) updateFields.description = description;
+  if (capacity !== undefined) updateFields.capacity = capacity;
+  if (programCode) updateFields.programCode = programCode;
 
-  writeJSON("courses.json", courses);
+  updateFields.updatedBy = req.user.username;
+  updateFields.updatedAt = new Date().toISOString();
 
-  res.json({
-    message: "Course updated successfully",
-    course: courses[courseIndex],
-  });
+  await updateOne(collectionEnum.COURSES, { code: req.params.code }, { $set: updateFields });
+  const updated = await findOne(collectionEnum.COURSES, { code: req.params.code });
+
+  res.json({ message: "Course updated successfully", course: updated });
 });
 
 // Delete course (Admin only)
-router.delete("/:code", verifyToken, (req, res) => {
-  if (req.user.role !== "admin") {
+router.delete("/:code", verifyToken, async (req, res) => {
+  if (req.user.role !== roleEnum.ADMIN) {
     return res.status(403).json({ error: "Access denied. Admin only." });
   }
 
-  const courses = readJSON("courses.json");
-  const courseIndex = courses.findIndex((c) => c.code === req.params.code);
+  const existing = await findOne(collectionEnum.COURSES, { code: req.params.code });
+  if (!existing) return res.status(404).json({ error: "Course not found" });
+  if (existing.enrolled > 0) 
+    return res.status(400).json({ error: "Cannot delete course with active enrollments" });
+  
 
-  if (courseIndex === -1) {
-    return res.status(404).json({ error: "Course not found" });
-  }
-
-  courses.splice(courseIndex, 1);
-  writeJSON("courses.json", courses);
-
+  await deleteOne(collectionEnum.COURSES, { code: req.params.code });
   res.json({ message: "Course deleted successfully" });
 });
 

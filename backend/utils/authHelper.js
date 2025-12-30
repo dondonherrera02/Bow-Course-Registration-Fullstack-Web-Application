@@ -6,16 +6,16 @@
  */
 
 const bcrypt = require("bcrypt");
-const { readJSON } = require("./fileOperations");
-const { roleEnum } = require("./enum");
+const { roleEnum, collectionEnum } = require("./enum");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "bowcourse-secret-key-2025";
+const { getDatabase } = require("./mongoService");
 
 // Generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
     {
-      id: user.id,
+      userId: user.userId,
       username: user.username,
       role: user.role,
     },
@@ -50,14 +50,36 @@ const verifyAdmin = (req, res, next) => {
 };
 
 // Generate student ID
-const generateStudentId = () => {
-  const students = readJSON("students.json");
+async function generateStudentIdDb() {
+  const db = await getDatabase();
+  const c = db.collection(collectionEnum.STUDENTS);
   const year = new Date().getFullYear();
-  const lastId =
-    students.length > 0 ? students[students.length - 1].id : `STUD${year}000`;
-  const num = parseInt(lastId.slice(-3)) + 1;
-  return `STUD${year}${String(num).padStart(3, "0")}`;
-};
+  const count = await c.countDocuments();
+  return `STUD${year}${String(count + 1).padStart(3, "0")}`;
+}
+
+// Generate admin ID
+async function generateAdminIdDb() {
+  const db = await getDatabase();
+  const c = db.collection(collectionEnum.ADMINS);
+
+  // Get the highest existing adminId number, then +1
+  const cursor = c.find({}, { projection: { adminId: 1 } });
+  let max = 0;
+
+  await cursor.forEach((doc) => {
+    const id =
+      doc && (doc.adminId || doc.id || (doc._id && doc._id.toString()));
+    if (!id) return;
+    const m = id.toString().match(/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+  });
+  const next = max + 1;
+  return `ADMIN${String(next).padStart(3, "0")}`;
+}
 
 const hashPassword = async (password) => {
   const saltRounds = 10;
@@ -133,7 +155,8 @@ module.exports = {
   generateToken,
   verifyToken,
   verifyAdmin,
-  generateStudentId,
+  generateStudentIdDb,
+  generateAdminIdDb,
   hashPassword,
   validateRegistrationFields,
 };

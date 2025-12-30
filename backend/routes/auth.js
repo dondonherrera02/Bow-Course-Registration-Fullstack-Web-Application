@@ -7,17 +7,19 @@
 
 const express = require("express");
 const router = express.Router();
-const { writeJSON, readJSON } = require("../utils/fileOperations");
-const { roleEnum } = require("../utils/enum");
+const { roleEnum, collectionEnum } = require("../utils/enum");
 const bcrypt = require("bcrypt");
 const {
-  generateStudentId,
   hashPassword,
   validateRegistrationFields,
+  generateStudentIdDb,
+  generateAdminIdDb,
 } = require("../utils/authHelper");
-const { findUserByField, prepareUserResponse } = require("../utils/userHelper");
+const { prepareUserResponse } = require("../utils/userHelper");
 
-// Login route
+const { findOne, createDocument, exists } = require("../utils/mongoService");
+
+// Login route, student and admin
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -25,28 +27,34 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Username and password required" });
   }
 
-  // Try student login
-  let user = findUserByField("students.json", "username", username);
-  if (user) {
-    const valid = await bcrypt.compare(password, user.hashedPassword);
-    if (!valid) return res.status(401).json({ error: "Invalid password" });
-    return res.json(prepareUserResponse(user, roleEnum.STUDENT));
-  }
+  try {
+    // Try student login (use helper)
+    let user = await findOne(collectionEnum.STUDENTS, { username: username });
 
-  // Try admin login
-  user = findUserByField("admins.json", "username", username);
-  if (user) {
-    const valid = await bcrypt.compare(password, user.hashedPassword);
-    if (!valid) return res.status(401).json({ error: "Invalid password" });
-    return res.json(prepareUserResponse(user, roleEnum.ADMIN));
-  }
+    if (user) {
+      const valid = await bcrypt.compare(password, user.hashedPassword || "");
+      if (!valid) return res.status(401).json({ error: "Invalid password" });
+      return res.json(prepareUserResponse(user));
+    }
 
-  // If no valid user found
-  return res.status(401).json({ error: "Invalid credentials" });
+    // Try admin login (use helper)
+    user = await findOne(collectionEnum.ADMINS, { username: username });
+    if (user) {
+      const valid = await bcrypt.compare(password, user.hashedPassword || "");
+      if (!valid) return res.status(401).json({ error: "Invalid password" });
+      return res.json(prepareUserResponse(user));
+    }
+
+    // If no valid user found
+    return res.status(401).json({ error: "Invalid credentials" });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Register new student
-router.post("/register", async (req, res) => {
+router.post("/register-student", async (req, res) => {
   const {
     firstName,
     lastName,
@@ -58,51 +66,96 @@ router.post("/register", async (req, res) => {
     password,
   } = req.body;
 
-  // Validation
-  const errors = validateRegistrationFields(req.body);
-  if (errors) {
-    return res.status(400).json({ error: errors });
+  try {
+    // Validation
+    const errors = validateRegistrationFields(req.body);
+    if (errors && errors.length) {
+      return res.status(400).json({ error: errors });
+    }
+
+    // Check if username/email exists (use helpers)
+    if (await exists(collectionEnum.STUDENTS, { username })) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    if (await exists(collectionEnum.STUDENTS, { email })) {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
+    // Hash the password before storing
+    const hashed = await hashPassword(password);
+
+    // Generate student id based on DB count
+    const userId = await generateStudentIdDb();
+
+    // Create new student document
+    const newStudent = {
+      userId, // use studentId field to avoid collision with Mongo _id
+      firstName,
+      lastName,
+      email,
+      phone,
+      birthday,
+      program,
+      username,
+      role: roleEnum.STUDENT,
+      department: "SD",
+      hashedPassword: hashed,
+      registeredCourses: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Insert student into MongoDB using helper
+    await createDocument(collectionEnum.STUDENTS, newStudent);
+
+    res.status(201).json({
+      message: "Student registered successfully",
+      studentId: newStudent.userId,
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
+});
 
-  // Check if username or email exists
-  let studentUsername = findUserByField("students.json", "student", username);
-  if (studentUsername) {
-    return res.status(400).json({ error: "Username already exists" });
+//Register new admin
+router.post("/register-admin", async (req, res) => {
+  const { name, email, username, password } = req.body;
+  try {
+    // Check if username exists (use helper)
+    if (await exists(collectionEnum.ADMINS, { username })) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    // Hash the password before storing
+    const hashed = await hashPassword(password);
+
+    // Generate admin id
+    const userId = await generateAdminIdDb();
+
+    // Create new admin document
+    const newAdmin = {
+      userId,
+      username,
+      name,
+      email,
+      role: roleEnum.ADMIN,
+      hashedPassword: hashed,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    // Insert admin into MongoDB using helper
+    await createDocument(collectionEnum.ADMINS, newAdmin);
+
+    res.status(201).json({
+      message: "Admin registered successfully",
+      username: newAdmin.username,
+    });
+  } catch (error) {
+    console.error("Admin registration error:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
-
-  let studentEmail = findUserByField("students.json", "email", email);
-
-  if (studentEmail) {
-    return res.status(400).json({ error: "Email already exists" });
-  }
-
-  // Hash the password before storing
-  const hashedPassword = await hashPassword(password);
-
-  // Create new student
-  const newStudent = {
-    id: generateStudentId(),
-    firstName,
-    lastName,
-    email,
-    phone,
-    birthday,
-    department: "SD",
-    program,
-    username,
-    hashedPassword,
-    registeredCourses: [],
-    createdAt: new Date().toISOString(),
-  };
-
-  const students = readJSON("students.json");
-  students.push(newStudent);
-  writeJSON("students.json", students);
-
-  res.status(201).json({
-    message: "Student registered successfully",
-    studentId: newStudent.id,
-  });
 });
 
 module.exports = router;
