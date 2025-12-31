@@ -1,6 +1,6 @@
 # Bow Course Registration Fullstack Web Application
 
-**Course:** Web Programming SODV2201  
+**Course:** Web Programming 
 **Year:** 2025  
 **Project Type:** Fullstack Web Application  
 **Team Size:** 3–4 members  
